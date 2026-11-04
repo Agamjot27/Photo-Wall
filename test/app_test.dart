@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:photo_wall/app/photo_wall_app.dart';
 import 'package:photo_wall/features/photos/screens/photo_wall_screen.dart';
 
 void main() {
@@ -12,10 +13,8 @@ void main() {
       ),
     );
     await tester.pumpWidget(
-      MaterialApp(
-        home: PhotoWallScreen(
-          imageProviderFactory: (photo, {required fullScreen}) => image,
-        ),
+      PhotoWallApp(
+        imageProviderFactory: (photo, {required fullScreen}) => image,
       ),
     );
     await tester.runAsync(() async {
