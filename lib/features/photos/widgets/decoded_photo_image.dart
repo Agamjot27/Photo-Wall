@@ -59,7 +59,11 @@ class _DecodedPhotoImageState extends State<DecodedPhotoImage> {
         return;
       }
       setState(() => _image = image);
-    } catch (_) {
+    } catch (error) {
+      assert(() {
+        debugPrint('Failed to load photo ${widget.photo.id}: $error');
+        return true;
+      }());
       if (mounted && generation == _generation) {
         setState(() => _failed = true);
       }
@@ -112,15 +116,20 @@ class _DecodedPhotoImageState extends State<DecodedPhotoImage> {
   Widget build(BuildContext context) {
     if (_failed) {
       return Center(
-        child: Tooltip(
-          message: 'Photo failed to load. Retry',
-          child: SizedBox.square(
-            dimension: 48,
-            child: FButton.icon(
-              onPress: _retry,
-              child: const Icon(FIcons.rotateCw),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Photo could not load', style: context.theme.typography.sm),
+            const SizedBox(height: 12),
+            Tooltip(
+              message: 'Photo failed to load. Retry',
+              child: OutlinedButton.icon(
+                onPressed: _retry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
             ),
-          ),
+          ],
         ),
       );
     }

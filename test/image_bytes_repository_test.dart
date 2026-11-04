@@ -7,6 +7,23 @@ import 'package:photo_wall/core/images/disk_image_cache.dart';
 import 'package:photo_wall/core/images/image_bytes_repository.dart';
 
 void main() {
+  test('a stalled image response ends with a timeout', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) {
+      request.response.headers.contentType = ContentType('image', 'jpeg');
+      request.response.write([1, 2, 3]);
+    });
+    try {
+      final url = Uri.parse('http://127.0.0.1:${server.port}/photo');
+      await expectLater(
+        fetchImageBytes(url, timeout: const Duration(milliseconds: 250)),
+        throwsA(isA<TimeoutException>()),
+      );
+    } finally {
+      await server.close(force: true);
+    }
+  });
+
   test('disk hit avoids a second download, even after cache restart', () async {
     final directory = await Directory.systemTemp.createTemp(
       'photo-wall-source-test-',

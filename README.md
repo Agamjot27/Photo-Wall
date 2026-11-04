@@ -113,10 +113,13 @@ square crops; viewer requests preserve the source aspect ratio and cap the longe
 side at 1600px without upscaling. Photographer names appear in the viewer.
 
 Tap a tile to open it. Use the app bar back button or Android back to return.
-A spinner indicates loading; the retry icon has a descriptive tooltip and retries
-a failed image. Successfully cached image variants can load offline until Android
-clears app cache storage. A cached thumbnail
-does not imply that its separate full-screen variant is cached.
+A spinner indicates loading; failed images offer Retry. Successfully cached image
+variants can load offline until Android clears app cache storage. A cached
+thumbnail does not imply that its separate full-screen variant is cached.
+
+Remote requests have a 30-second overall limit. If a request or decode fails, the
+photo shows a clear Retry button. A thumbnail and its full-screen image are
+separate downloads, so a visible thumbnail can still lead to a viewer failure.
 
 ## Decoded memory cache and eviction
 

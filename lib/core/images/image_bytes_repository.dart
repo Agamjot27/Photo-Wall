@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' show Codec, ImmutableBuffer;
@@ -77,29 +78,34 @@ class ImageBytesRepository {
   }
 }
 
-Future<Uint8List> fetchImageBytes(Uri url) async {
+Future<Uint8List> fetchImageBytes(
+  Uri url, {
+  Duration timeout = const Duration(seconds: 30),
+}) async {
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
   try {
-    final request = await client.getUrl(url);
-    final response = await request.close();
-    if (response.statusCode != HttpStatus.ok) {
-      throw HttpException(
-        'Image request failed: ${response.statusCode}',
-        uri: url,
-      );
-    }
-    const maximumBytes = 20 * 1024 * 1024;
-    final builder = BytesBuilder(copy: false);
-    await for (final chunk in response.timeout(const Duration(seconds: 20))) {
-      if (builder.length + chunk.length > maximumBytes) {
-        throw const FormatException('Image response exceeds 20 MiB');
+    return await (() async {
+      final request = await client.getUrl(url);
+      final response = await request.close();
+      if (response.statusCode != HttpStatus.ok) {
+        throw HttpException(
+          'Image request failed: ${response.statusCode}',
+          uri: url,
+        );
       }
-      builder.add(chunk);
-    }
-    if (builder.length == 0) {
-      throw const FormatException('Empty image response');
-    }
-    return builder.takeBytes();
+      const maximumBytes = 20 * 1024 * 1024;
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in response) {
+        if (builder.length + chunk.length > maximumBytes) {
+          throw const FormatException('Image response exceeds 20 MiB');
+        }
+        builder.add(chunk);
+      }
+      if (builder.length == 0) {
+        throw const FormatException('Empty image response');
+      }
+      return builder.takeBytes();
+    })().timeout(timeout);
   } finally {
     client.close(force: true);
   }

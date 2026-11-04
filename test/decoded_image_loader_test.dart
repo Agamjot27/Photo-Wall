@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:forui/forui.dart';
 import 'package:photo_wall/core/images/decoded_image_loader.dart';
 import 'package:photo_wall/core/images/disk_image_cache.dart';
 import 'package:photo_wall/core/images/image_bytes_repository.dart';
@@ -23,6 +24,35 @@ ui.Image makeImage() {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets('failed decoded photo shows Retry and can recover', (
+    tester,
+  ) async {
+    var attempts = 0;
+    Future<ui.Image> load(photo, {required bool fullScreen}) async {
+      attempts++;
+      if (attempts == 1) throw const FormatException('bad image');
+      return makeImage();
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FTheme(
+          data: FThemes.zinc.light,
+          child: DecodedPhotoImage(photo: photoCatalog.first, loader: load),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Photo could not load'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    expect(find.byType(RawImage), findsOneWidget);
+    expect(attempts, 2);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
   test('thumbnail memory hit skips disk, network and decode', () async {
     final directory = await Directory.systemTemp.createTemp(
       'photo-wall-memory-test-',
