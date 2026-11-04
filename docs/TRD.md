@@ -336,6 +336,13 @@ Thumbnail images use 400px target decoding; widgets hold cloned image handles,
 while full-screen images are not admitted to the shared decoded cache.
 The legacy framework ImageProvider remains only as an injectable test path.
 
+Phase 5 adds one three-slot scheduler around each disk/network/decode job.
+Full-screen jobs have queue priority, identical decoded requests share work,
+and queued jobs cancel when their last subscriber leaves. Active jobs complete
+for any remaining subscribers; unneeded results are disposed. Different source
+variants are not yet deduplicated together, and active HTTP/codec cancellation
+remains optional.
+
 An Android emulator is now detected, but the agent-session APK build still
 fails with the Gradle loopback error. Device interaction/performance verification
 and the final release APK remain pending.

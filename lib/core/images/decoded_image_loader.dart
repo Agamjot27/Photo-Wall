@@ -57,11 +57,11 @@ class DecodedImageLoader {
       unawaited(
         job.future.then(
           (image) {
-            _inFlight.remove(key);
+            if (identical(_inFlight[key], current)) _inFlight.remove(key);
             current.complete(image);
           },
           onError: (Object error, StackTrace stack) {
-            _inFlight.remove(key);
+            if (identical(_inFlight[key], current)) _inFlight.remove(key);
             current.fail(error, stack);
           },
         ),

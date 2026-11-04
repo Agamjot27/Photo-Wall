@@ -12,8 +12,8 @@ by the project owner.
 
 Phase 3 stores compressed images in a custom 100 MiB disk cache. The app checks
 disk before network and retains files across restarts. Phase 4 adds a custom
-32 MiB decoded-image LRU cache for grid thumbnails. The loading scheduler is
-planned for Phase 5.
+32 MiB decoded-image LRU cache for grid thumbnails. Phase 5 limits active image
+jobs to three and shares identical requests.
 Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, loading
 indicator, and retry control. The grid remains a lazy Flutter GridView.
 See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
@@ -59,7 +59,7 @@ selected-photo navigation, both back paths with scroll retention, image retry,
 stale completion, and disposal during retry. Tests use local image fixtures and
 controlled image providers; they do not depend on live image servers.
 The UI suite also checks the Forui gallery at narrow Android width in dark mode.
-Cache, scheduler, and memory-pressure tests will accompany those implementations.
+Memory-pressure tests will accompany that implementation.
 
 ## Architecture
 
@@ -72,6 +72,7 @@ lib/
     image_bytes_repository.dart
     memory_image_cache.dart
     decoded_image_loader.dart
+    load_scheduler.dart
   features/photos/
     models/photo.dart
     models/photo_catalog.dart
@@ -88,11 +89,13 @@ test/
   image_bytes_repository_test.dart
   memory_image_cache_test.dart
   decoded_image_loader_test.dart
+  load_scheduler_test.dart
+  image_loading_coordination_test.dart
   support/test_images.dart
 ~~~
 
 UI remains in features/photos. Loading, decoding, and both caches live in
-core/images. The scheduler will join them in Phase 5.
+core/images, including the Phase 5 scheduler.
 
 ## Photo source and current behavior
 
@@ -141,8 +144,23 @@ budget. The OS may clear the app cache at any time; offline use is best effort.
 Image decode failure from a disk hit invalidates the entry and retries network once.
 
 The planned streaming download and per-file pinning in the TRD are not yet
-implemented. Phase 5 will handle deduplicating and limiting concurrent requests.
+implemented. Phase 5 handles identical-request sharing and limits concurrent jobs.
 The disk layer does not enforce the memory budget.
+
+## Loading coordination
+
+A single three-slot scheduler covers each job from disk lookup through download
+and decode. Full-screen requests enter a higher-priority queue; jobs already
+running are not preempted. Identical active requests share one job. Each
+subscriber receives its own decoded-image handle and can leave independently.
+When the last subscriber leaves a queued job, it is removed before starting.
+An active job may continue after its last subscriber leaves; its result is
+disposed when complete. Widgets also check their request generation before
+displaying a result, preventing a late response from replacing another photo.
+
+The current scheduler does not prefetch or cancel active HTTP/codec work.
+Different URL variants do not share their compressed source request. Diagnostic
+counters and memory-pressure trimming are planned for later phases.
 
 ## Planned memory-pressure handling
 
@@ -173,6 +191,8 @@ Validation status:
   entries, recovery, concurrent writes, and avoiding a repeat download.
 - Phase 4 tests cover decoded-image LRU accounting, active clone safety,
   oversized-image admission, memory hits, viewer ownership, and late results.
+- Phase 5 tests cover three-slot scheduling, viewer priority, failure cleanup,
+  duplicate-request sharing, independent cancellation, and replacement races.
 - An Android 15 emulator is now detected as emulator-5556.
 - A Phase 2 debug build from the agent session still fails with
   java.io.IOException: Unable to establish loopback connection.
@@ -190,7 +210,7 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 4 checkpoint, not a complete submission. Bounded downloads
-and decodes, memory-pressure handling, the debug panel, and a verified final APK
+This is a Phase 5 checkpoint, not a complete submission. Memory-pressure handling,
+the debug panel, and a verified final APK
 remain outstanding. Native integration is not implemented. The custom memory
 budget does not cap temporary or total process memory.

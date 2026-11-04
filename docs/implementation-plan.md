@@ -68,12 +68,18 @@ stale results, and disposal. Android verification remains pending.
 
 ## Phase 5 - Loading coordination
 
-1. feat: bound image loading concurrency and share duplicate requests
-2. fix: ignore stale image results and prioritize visible requests
-3. test: cover loading races failures and concurrency limits
+1. phase-5: bound image pipeline to three active jobs
+2. phase-5: share image requests and cancel unused queued work
+3. phase-5: verify loading races and document coordination
 
 Acceptance: three active pipeline jobs at most, correct cell identity during fast
 scrolling, no duplicate work for identical active requests, and graceful failures.
+
+Implemented: a three-slot scheduler across disk/network/decode, urgent viewer
+queue, identical-request sharing, queued cancellation, and widget generation
+checks. Tests cover permit limits, priority, failures, shared subscribers,
+and cancellation replacement races. Active transport cancellation and prefetch
+remain optional and are not implemented.
 
 ## Phase 6 - Memory lifecycle
 

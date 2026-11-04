@@ -24,6 +24,58 @@ ui.Image tinyImage() {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test(
+    'replacing a cancelled queued request does not lose the new job',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'photo-wall-queue-',
+      );
+      final memory = MemoryImageCache(maxBytes: 1024);
+      try {
+        final disk = DiskImageCache(directory);
+        await disk.initialize();
+        final firstStarted = Completer<void>();
+        final releaseFirst = Completer<void>();
+        var downloads = 0;
+        final source = ImageBytesRepository(
+          disk,
+          fetch: (uri) async {
+            downloads++;
+            if (uri.toString() == photoCatalog.first.thumbnailUrl) {
+              firstStarted.complete();
+              await releaseFirst.future;
+            }
+            return Uint8List.fromList([1]);
+          },
+        );
+        final loader = DecodedImageLoader(
+          repository: Future.value(source),
+          memoryCache: memory,
+          scheduler: LoadScheduler(maxActive: 1),
+          decoder: (bytes, {required fullScreen}) async => tinyImage(),
+        );
+        final active = loader.request(photoCatalog.first, fullScreen: false);
+        await firstStarted.future;
+        final old = loader.request(photoCatalog[1], fullScreen: false);
+        final cancelled = expectLater(
+          old.future,
+          throwsA(isA<LoadCancelled>()),
+        );
+        old.cancel();
+        final replacement = loader.request(photoCatalog[1], fullScreen: false);
+        await cancelled;
+        releaseFirst.complete();
+        (await active.future).dispose();
+        (await replacement.future).dispose();
+        expect(downloads, 2);
+        expect(loader.inFlightCount, 0);
+      } finally {
+        memory.clear();
+        await directory.delete(recursive: true);
+      }
+    },
+  );
+
   test('identical subscribers share work and one may leave safely', () async {
     final directory = await Directory.systemTemp.createTemp(
       'photo-wall-shared-',
