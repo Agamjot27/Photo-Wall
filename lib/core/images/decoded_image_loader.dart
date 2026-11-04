@@ -30,8 +30,14 @@ class DecodedImageLoader {
   final LoadScheduler scheduler;
   final PhotoDecoder _decoder;
   final Map<String, _SharedLoad> _inFlight = {};
+  int _admissionEpoch = 0;
 
   int get inFlightCount => _inFlight.length;
+
+  void handleMemoryPressure() {
+    _admissionEpoch++;
+    memoryCache.trimForPressure();
+  }
 
   Future<ui.Image> load(Photo photo, {required bool fullScreen}) =>
       request(photo, fullScreen: fullScreen).future;
@@ -47,8 +53,14 @@ class DecodedImageLoader {
     }
     var shared = _inFlight[key];
     if (shared == null) {
+      final admissionEpoch = _admissionEpoch;
       final job = scheduler.schedule(
-        () => _execute(url, key, fullScreen: fullScreen),
+        () => _execute(
+          url,
+          key,
+          fullScreen: fullScreen,
+          admissionEpoch: admissionEpoch,
+        ),
         urgent: fullScreen,
       );
       shared = _SharedLoad(job, () => _inFlight.remove(key));
@@ -74,6 +86,7 @@ class DecodedImageLoader {
     String url,
     String key, {
     required bool fullScreen,
+    required int admissionEpoch,
   }) async {
     if (!fullScreen) {
       final cached = memoryCache.get(key);
@@ -93,6 +106,7 @@ class DecodedImageLoader {
       );
     }
     if (fullScreen) return image;
+    if (admissionEpoch != _admissionEpoch) return image;
     return memoryCache.admit(key, image);
   }
 }

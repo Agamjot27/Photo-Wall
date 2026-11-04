@@ -8,6 +8,7 @@ import '../core/images/disk_image_cache.dart';
 import '../core/images/decoded_image_loader.dart';
 import '../core/images/image_bytes_repository.dart';
 import '../core/images/memory_image_cache.dart';
+import '../core/images/memory_pressure_observer.dart';
 import '../features/photos/models/photo.dart';
 import '../features/photos/screens/photo_wall_screen.dart';
 import '../features/photos/widgets/photo_image.dart';
@@ -69,7 +70,13 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
                 Theme.of(context).brightness == Brightness.dark
                     ? FThemes.zinc.dark
                     : FThemes.zinc.light,
-            child: child!,
+            child:
+                widget.imageProviderFactory == null
+                    ? MemoryPressureObserver(
+                      onPressure: _decodedLoader.handleMemoryPressure,
+                      child: child!,
+                    )
+                    : child!,
           ),
       home: PhotoWallScreen(
         imageProviderFactory: widget.imageProviderFactory ?? _imageProvider,
@@ -79,5 +86,13 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
             widget.imageProviderFactory == null ? _decodedLoader.request : null,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    if (widget.imageProviderFactory == null) {
+      _decodedLoader.memoryCache.clear();
+    }
+    super.dispose();
   }
 }

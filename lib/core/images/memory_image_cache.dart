@@ -51,5 +51,11 @@ class MemoryImageCache {
     _bytes = 0;
   }
 
+  /// Counts and drops cache-owned images on a system pressure signal.
+  void trimForPressure() {
+    _evictions += _images.length;
+    clear();
+  }
+
   static int _sizeOf(ui.Image image) => image.width * image.height * 4;
 }
