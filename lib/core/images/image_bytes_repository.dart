@@ -1,0 +1,104 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' show Codec, ImmutableBuffer;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
+
+import 'disk_image_cache.dart';
+
+typedef ImageFetcher = Future<Uint8List> Function(Uri url);
+
+class ImageBytesRepository {
+  ImageBytesRepository(this.cache, {ImageFetcher? fetch})
+    : _fetch = fetch ?? fetchImageBytes;
+
+  final DiskImageCache cache;
+  final ImageFetcher _fetch;
+
+  Future<(Uint8List, bool)> load(String url) async {
+    final cached = await cache.read(url);
+    if (cached != null) return (cached, true);
+    return (await download(url), false);
+  }
+
+  Future<Uint8List> download(String url) async {
+    final bytes = await _fetch(Uri.parse(url));
+    try {
+      await cache.write(url, bytes);
+    } on FileSystemException {
+      // A full or unavailable cache cannot prevent displaying downloaded bytes.
+    }
+    return bytes;
+  }
+
+  Future<void> invalidate(String url) => cache.invalidate(url);
+}
+
+Future<Uint8List> fetchImageBytes(Uri url) async {
+  final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+  try {
+    final request = await client.getUrl(url);
+    final response = await request.close();
+    if (response.statusCode != HttpStatus.ok) {
+      throw HttpException(
+        'Image request failed: ${response.statusCode}',
+        uri: url,
+      );
+    }
+    const maximumBytes = 20 * 1024 * 1024;
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in response.timeout(const Duration(seconds: 20))) {
+      if (builder.length + chunk.length > maximumBytes) {
+        throw const FormatException('Image response exceeds 20 MiB');
+      }
+      builder.add(chunk);
+    }
+    if (builder.length == 0) {
+      throw const FormatException('Empty image response');
+    }
+    return builder.takeBytes();
+  } finally {
+    client.close(force: true);
+  }
+}
+
+/// Phase 3 still uses Flutter's decoded ImageCache; Phase 4 replaces that layer.
+class DiskCachedImageProvider extends ImageProvider<String> {
+  const DiskCachedImageProvider({required this.url, required this.repository});
+
+  final String url;
+  final Future<ImageBytesRepository> repository;
+
+  @override
+  Future<String> obtainKey(ImageConfiguration configuration) =>
+      SynchronousFuture(url);
+
+  @override
+  ImageStreamCompleter loadImage(String key, ImageDecoderCallback decode) {
+    return MultiFrameImageStreamCompleter(codec: _loadCodec(decode), scale: 1);
+  }
+
+  Future<Codec> _loadCodec(ImageDecoderCallback decode) async {
+    final source = await repository;
+    final (bytes, fromDisk) = await source.load(url);
+    try {
+      return await decode(await ImmutableBuffer.fromUint8List(bytes));
+    } catch (_) {
+      if (!fromDisk) rethrow;
+      await source.invalidate(url);
+      return decode(
+        await ImmutableBuffer.fromUint8List(await source.download(url)),
+      );
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is DiskCachedImageProvider &&
+      other.url == url &&
+      identical(other.repository, repository);
+
+  @override
+  int get hashCode => Object.hash(url, identityHashCode(repository));
+}
