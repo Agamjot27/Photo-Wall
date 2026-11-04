@@ -321,10 +321,15 @@ Keep two or three commits per implementation phase and update docs with actual
 decisions as implementation evolves. Phase 1 has two commits: the app foundation
 and documentation, including the PRD/TRD baseline.
 
-Phase 1 formatting, analysis, and startup test passed. Android build/device
-verification remains open due to the local loopback build error, missing SDK
-command-line tools, unknown license status, and absent connected Android device.
-No APK success is claimed.
+Phase 1 formatting, analysis, and startup test passed; the owner confirmed an
+Android launch. Phase 2 implements gallery/viewer flows with temporary NetworkImage
+loading and injectable providers for deterministic UI tests. The custom contracts
+above remain planned for later phases. Thumbnail sources are 400px square crops;
+the viewer currently caps the longest side at 1600px (below the proposed 4 MP cap).
+
+An Android emulator is now detected, but the agent-session Phase 2 APK build still
+fails with the Gradle loopback error. Phase 2 device interaction/performance
+verification and the final release APK remain pending.
 
 Before submission, complete the required phases, resolve Android verification,
 review release signing (currently the template's debug signing), and produce a

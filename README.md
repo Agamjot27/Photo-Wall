@@ -5,9 +5,14 @@ memory management, and bounded concurrency.
 
 ## Current status
 
-Phase 1 source foundation is implemented: Android scaffold, app entry point,
-a placeholder Photo Wall screen, strict analysis, and a startup widget test.
-The gallery and image-loading system are not implemented yet.
+Phase 2 adds a lazy three-column gallery of 100 distinct remote photos, a
+full-screen viewer, back navigation with preserved scroll position, loading
+indicators, and per-image retry controls. Phase 1 was successfully run on Android
+by the project owner.
+
+Image loading currently uses Flutter's NetworkImage and framework image cache.
+This is temporary scaffolding: custom disk/memory caches, concurrency limits, and
+memory-pressure handling remain planned for Phases 3-6.
 See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
 
 ## Requirements and design
@@ -46,24 +51,49 @@ flutter analyze
 flutter test
 ~~~
 
-The startup test verifies that the app opens on the Photo Wall screen.
-Cache, concurrency, and lifecycle tests will accompany those implementations.
+Tests cover grid layout/lazy construction, catalog identity and image sizing,
+selected-photo navigation, both back paths with scroll retention, image retry,
+stale completion, and disposal during retry. Tests use local image fixtures and
+controlled image providers; they do not depend on live image servers.
+Cache, scheduler, and memory-pressure tests will accompany those implementations.
 
 ## Architecture
 
 ~~~text
 lib/
-  main.dart                              # App entry point
-  app/photo_wall_app.dart                # MaterialApp and theme
-  features/photos/screens/
-    photo_wall_screen.dart               # Initial feature screen
+  main.dart
+  app/photo_wall_app.dart
+  features/photos/
+    models/photo.dart
+    models/photo_catalog.dart
+    screens/photo_wall_screen.dart
+    screens/photo_viewer_screen.dart
+    widgets/photo_image.dart
 test/
-  app_test.dart                          # Startup smoke test
+  app_test.dart
+  photo_catalog_test.dart
+  photo_navigation_test.dart
+  photo_image_test.dart
+  support/test_images.dart
 ~~~
 
 UI remains in features/photos. Future loading, decoding, scheduling, and cache
 code will live in core/images, created when those components are implemented.
 Dependencies will be introduced only when needed.
+
+## Photo source and current behavior
+
+The catalog is a checked-in metadata snapshot of 100 distinct photo IDs from
+[Lorem Picsum](https://picsum.photos/), so startup does not need a metadata API
+request. Photos download remotely using stable ID URLs. Grid requests use 400px
+square crops; viewer requests preserve the source aspect ratio and cap the longest
+side at 1600px without upscaling. Photographer names appear in the viewer.
+
+Tap a tile to open it. Use the app bar back button or Android back to return.
+A spinner indicates loading; the retry icon has a descriptive tooltip and retries
+a failed image after evicting its framework cache entry. The public source may be
+unavailable; the app has no durable offline guarantee until the custom disk cache
+is implemented.
 
 ## Planned memory cache and eviction
 
@@ -98,24 +128,30 @@ flutter build apk --release
 Flutter writes APKs under build/app/outputs/flutter-apk/. Build outputs are ignored
 by Git; the eventual submission APK should be attached to a GitHub release.
 
-Phase 1 checks on 2026-11-04:
+Validation status:
 
-- Formatting: passed.
-- flutter analyze: passed with no issues.
-- flutter test: passed (one startup widget test).
-- Android debug build: blocked by Java/Gradle reporting
+- Phase 1 formatting, analysis, and startup test passed.
+- The owner confirmed that Phase 1 runs on Android.
+- Phase 2 automated validation is recorded in the implementation plan.
+- An Android 15 emulator is now detected as emulator-5556.
+- A Phase 2 debug build from the agent session still fails with
   java.io.IOException: Unable to establish loopback connection.
-  A retry with Java IPv4 preference produced the same error.
-- flutter doctor also reported missing Android command-line tools and unknown
-  Android license status.
-- No Android device was connected, so an on-device launch is not yet verified.
+  This is separate from the owner's successful local Phase 1 launch.
+- Phase 2 on-device interaction and performance verification remain pending.
+
+To verify Phase 2 locally, restart the running app (or run flutter run), scroll
+through the gallery, open a photo, try both back controls, and confirm the scroll
+position is retained. With an uncached image, disable connectivity to check its
+error state, then restore connectivity and retry. Framework caching can keep
+already-loaded images visible while offline.
 
 The generated release configuration currently uses debug signing. Release
 packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a foundation checkpoint, not a complete submission. The 100-image grid,
-full-screen viewer, both caches, loading scheduler, memory-pressure handling,
-debug panel, and final APK remain outstanding. Visual design is intentionally
-minimal while the image-loading behavior is built and tested.
+This is a Phase 2 checkpoint, not a complete submission. Custom caches, bounded
+downloads/decodes, explicit decoded-image lifecycle control, memory-pressure
+handling, the debug panel, and a verified final APK remain outstanding.
+Phase 2 uses the framework cache, so it does not yet meet the assignment's custom
+32 MiB memory or 100 MiB disk requirements. Native integration is not implemented.

@@ -13,8 +13,8 @@ PRD/TRD baseline in its documentation commit. Publish to GitHub only after owner
 1. chore: initialize Photo Wall app foundation
 2. docs: define requirements architecture and delivery plan
 
-Source and automated checks are complete. Android build and device-launch
-verification remain blocked as recorded in README.md.
+Complete: source and automated checks passed; the owner confirmed an Android
+launch. Agent-session builds still encounter the loopback error noted in README.md.
 
 ## Phase 2 - Gallery and navigation
 
@@ -25,6 +25,13 @@ verification remain blocked as recorded in README.md.
 Acceptance: at least 100 remote images, lazy scrolling, full-screen navigation,
 back navigation, and loading/error states. Basic loading is temporary scaffolding
 until the custom pipeline replaces it.
+
+Implemented: 100 distinct photos, lazy three-column grid, full-screen navigation,
+scroll retention, loading/error states, and retry. Automated validation covers
+catalog identity/sizing, grid layout, navigation, retries, stale completions, and
+disposal during retry. All seven tests and static analysis pass; formatting is clean.
+Phase 2 Android interaction/performance checks remain pending;
+the agent-session APK build is blocked by the Gradle loopback error.
 
 ## Phase 3 - Disk cache
 

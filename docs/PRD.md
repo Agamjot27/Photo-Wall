@@ -115,12 +115,12 @@ build output. Update README with observed evidence and remaining limitations.
 
 ## Current implementation state
 
-Only the Phase 1 source foundation is implemented: Android scaffold, app structure,
-placeholder screen, strict linting, and a passing startup widget test.
-Gallery, caches, concurrency, lifecycle handling, diagnostics, and native bonuses
-are planned.
+Phases 1-2 provide the Android app foundation, a 100-photo gallery, full-screen
+viewer, loading and retry states, and automated UI/catalog tests. The owner
+confirmed Phase 1 runs on Android. Custom caches, bounded concurrency, memory
+lifecycle handling, diagnostics, and native bonuses remain planned.
 
-Android verification is pending: the local Gradle build failed with an inability
-to establish a loopback connection; the local SDK lacks command-line tools and
-license status is unknown; no Android device was connected during Phase 1.
-These are delivery blockers, not completed acceptance criteria.
+Phase 2 device interaction and performance checks are pending. The agent-session
+APK build still encounters a Gradle loopback connection error, despite the
+successful owner-run Phase 1 app. This does not constitute verified completion of
+Android release or performance acceptance criteria.
