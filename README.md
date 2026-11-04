@@ -215,6 +215,8 @@ flutter build apk --release
 
 Flutter writes APKs under build/app/outputs/flutter-apk/. Build outputs are ignored
 by Git; the eventual submission APK should be attached to a GitHub release.
+The Android APK workflow also builds and stores a downloadable APK artifact on
+GitHub after a push to main. That artifact still needs on-device verification.
 
 Validation status:
 

@@ -19,6 +19,9 @@ adb install -r build/app/outputs/flutter-apk/app-release.apk
 The current release configuration uses the debug signing key. This produces an
 installable APK for assignment review; do not use it as a store signing setup.
 Keep the APK out of Git history and attach it to the GitHub release.
+The Android APK GitHub Actions workflow runs the same checks on Ubuntu and
+provides a downloadable APK artifact after a successful push or manual run.
+Install and smoke-test that artifact before attaching it to a release.
 
 ## On-device acceptance
 
