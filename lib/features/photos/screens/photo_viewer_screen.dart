@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import '../models/photo.dart';
 import '../widgets/photo_image.dart';
@@ -15,12 +16,26 @@ class PhotoViewerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(photo.author),
-        leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+    return FScaffold(
+      childPad: false,
+      header: FHeader.nested(
+        titleAlignment: AlignmentDirectional.centerStart,
+        title: Text(photo.author, maxLines: 1, overflow: TextOverflow.ellipsis),
+        prefixes: [
+          Tooltip(
+            message: 'Back',
+            child: SizedBox.square(
+              dimension: 48,
+              child: FHeaderAction.back(
+                semanticsLabel: 'Back to photos',
+                onPress: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: SafeArea(
+      child: SafeArea(
+        top: false,
         child: PhotoImage(
           photo: photo,
           fullScreen: true,

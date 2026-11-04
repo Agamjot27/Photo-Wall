@@ -33,6 +33,9 @@ disposal during retry. All seven tests and static analysis pass; formatting is c
 Phase 2 Android interaction/performance checks remain pending;
 the agent-session APK build is blocked by the Gradle loopback error.
 
+A separate UI checkpoint after Phase 2 adds the installed Forui 0.11.1 themes
+and controls. Its light/dark and narrow-width behavior is covered by widget tests.
+
 ## Phase 3 - Disk cache
 
 1. feat: persist downloaded images with cache metadata

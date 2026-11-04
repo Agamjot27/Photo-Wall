@@ -37,6 +37,7 @@ void main() {
     expect(find.byTooltip('Photo failed to load. Retry'), findsNothing);
     expect(tester.widget<Image>(find.byType(Image)).image, ready);
     expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 250));
   });
 
   testWidgets('loading result from old photo cannot replace new photo', (
@@ -55,7 +56,7 @@ void main() {
       ),
     );
     await tester.pumpWidget(screen(0));
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const ValueKey('photo-loading')), findsOneWidget);
     await tester.pumpWidget(screen(1));
     await tester.pumpAndSettle();
     final recorder = ui.PictureRecorder();
@@ -66,7 +67,7 @@ void main() {
     pending.complete(ImageInfo(image: lateImage));
     await tester.pumpAndSettle();
     expect(tester.widget<Image>(find.byType(Image)).image, ready);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(const ValueKey('photo-loading')), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     PaintingBinding.instance.imageCache.clear();
@@ -100,5 +101,6 @@ void main() {
     await tester.pump();
     expect(calls, 1);
     expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 250));
   });
 }

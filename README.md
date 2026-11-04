@@ -13,6 +13,8 @@ by the project owner.
 Image loading currently uses Flutter's NetworkImage and framework image cache.
 This is temporary scaffolding: custom disk/memory caches, concurrency limits, and
 memory-pressure handling remain planned for Phases 3-6.
+Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, loading
+indicator, and retry control. The grid remains a lazy Flutter GridView.
 See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
 
 ## Requirements and design
@@ -55,6 +57,7 @@ Tests cover grid layout/lazy construction, catalog identity and image sizing,
 selected-photo navigation, both back paths with scroll retention, image retry,
 stale completion, and disposal during retry. Tests use local image fixtures and
 controlled image providers; they do not depend on live image servers.
+The UI suite also checks the Forui gallery at narrow Android width in dark mode.
 Cache, scheduler, and memory-pressure tests will accompany those implementations.
 
 ## Architecture

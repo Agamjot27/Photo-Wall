@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import '../models/photo.dart';
 
@@ -88,11 +89,15 @@ class _PhotoImageState extends State<PhotoImage> {
       gaplessPlayback: false,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         if (wasSynchronouslyLoaded || frame != null) return child;
-        return const Center(
+        return Center(
           child: SizedBox.square(
             dimension: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
+            child: FProgress.circularIcon(
+              key: const ValueKey('photo-loading'),
+              style: IconThemeData(
+                size: 20,
+                color: context.theme.colors.mutedForeground,
+              ),
               semanticsLabel: 'Loading photo',
             ),
           ),
@@ -100,10 +105,18 @@ class _PhotoImageState extends State<PhotoImage> {
       },
       errorBuilder: (context, error, stackTrace) {
         return Center(
-          child: IconButton(
-            tooltip: 'Photo failed to load. Retry',
-            onPressed: _retrying ? null : _retry,
-            icon: const Icon(Icons.refresh),
+          child: Tooltip(
+            message: 'Photo failed to load. Retry',
+            child: Semantics(
+              label: 'Photo failed to load. Retry',
+              child: SizedBox.square(
+                dimension: 48,
+                child: FButton.icon(
+                  onPress: _retrying ? null : _retry,
+                  child: const Icon(FIcons.rotateCw),
+                ),
+              ),
+            ),
           ),
         );
       },

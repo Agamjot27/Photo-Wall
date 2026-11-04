@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import '../models/photo.dart';
 import '../models/photo_catalog.dart';
@@ -17,16 +18,28 @@ class PhotoWallScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Photo Wall')),
-      body: SafeArea(
+    return FScaffold(
+      childPad: false,
+      header: FHeader(
+        title: const Text('Photo Wall'),
+        suffixes: [
+          Text(
+            '${photos.length} photos',
+            style: context.theme.typography.sm.copyWith(
+              color: context.theme.colors.mutedForeground,
+            ),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
         child: GridView.builder(
           key: const PageStorageKey<String>('photo-grid'),
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
           ),
           itemCount: photos.length,
           itemBuilder: (context, index) {
@@ -36,7 +49,9 @@ class PhotoWallScreen extends StatelessWidget {
               button: true,
               label: 'Open ${photo.semanticLabel.toLowerCase()}',
               child: Material(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                color: context.theme.colors.muted,
+                borderRadius: BorderRadius.circular(8),
+                clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: () async {
                     await Navigator.of(context).push<void>(
