@@ -96,12 +96,18 @@ and three viewer open/back cycles with released decoded images.
 
 ## Phase 7 - Diagnostics and UX
 
-1. feat: display cache usage evictions and active work
-2. feat: add manual cache clearing and consistent retry controls
-3. style: refine gallery and viewer presentation
+1. phase-7: display live cache usage, evictions, and active work
+2. phase-7: clear both caches safely during active requests
+3. phase-7: verify diagnostics and document cache controls
 
 Acceptance: accurate memory/disk bytes, eviction count, and active download/decode
 counts; safe clearing while work is active; usable loading and failure states.
+
+Implemented: gallery diagnostics action, live counters, manual clear, disk index
+persistence, and generation guards against stale memory/disk admission. Existing
+loading and retry controls remain available in the gallery and viewer. Tests
+cover clearing across restart and while a download is active. Android visual
+verification remains pending.
 
 ## Phase 8 - Submission readiness
 

@@ -14,6 +14,8 @@ Phase 3 stores compressed images in a custom 100 MiB disk cache. The app checks
 disk before network and retains files across restarts. Phase 4 adds a custom
 32 MiB decoded-image LRU cache for grid thumbnails. Phase 5 limits active image
 jobs to three and shares identical requests.
+Phase 6 trims decoded images on system memory pressure. Phase 7 adds a live
+diagnostics screen and manual cache clearing.
 Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, loading
 indicator, and retry control. The grid remains a lazy Flutter GridView.
 See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
@@ -59,7 +61,8 @@ selected-photo navigation, both back paths with scroll retention, image retry,
 stale completion, and disposal during retry. Tests use local image fixtures and
 controlled image providers; they do not depend on live image servers.
 The UI suite also checks the Forui gallery at narrow Android width in dark mode.
-Diagnostics tests will accompany the debug panel in Phase 7.
+Diagnostics and cache-clear tests cover active-download races and persisted
+disk clearing.
 
 ## Architecture
 
@@ -79,6 +82,7 @@ lib/
     models/photo_catalog.dart
     screens/photo_wall_screen.dart
     screens/photo_viewer_screen.dart
+    screens/cache_diagnostics_screen.dart
     widgets/photo_image.dart
     widgets/decoded_photo_image.dart
 test/
@@ -162,8 +166,20 @@ disposed when complete. Widgets also check their request generation before
 displaying a result, preventing a late response from replacing another photo.
 
 The current scheduler does not prefetch or cancel active HTTP/codec work.
-Different URL variants do not share their compressed source request. Diagnostic
-Diagnostic counters are planned for Phase 7.
+Different URL variants do not share their compressed source request.
+
+## Cache diagnostics and clearing
+
+Tap the activity icon in the gallery header to see live decoded-memory bytes,
+compressed-disk bytes, memory eviction count, active downloads, active decodes,
+and queued image jobs. Counters refresh while the screen is open. Cache sizes
+cover stored entries, not visible image handles or temporary buffers.
+
+The Clear caches button removes cache-owned decoded images and compressed files.
+Visible images remain usable. Requests already in progress may finish displaying,
+but an admission generation prevents their results from repopulating either cache.
+Later image requests fetch again and can enter the caches normally. Manual clear
+does not count as an LRU eviction.
 
 ## Memory pressure and viewer lifetime
 
@@ -207,6 +223,8 @@ Validation status:
   duplicate-request sharing, independent cancellation, and replacement races.
 - Phase 6 tests cover memory-pressure trimming, stale admission prevention,
   active-image safety, observer cleanup, and repeated viewer disposal.
+- Phase 7 tests cover persisted clearing and a download already running when
+  the user clears both caches.
 - An Android 15 emulator is now detected as emulator-5556.
 - A Phase 2 debug build from the agent session still fails with
   java.io.IOException: Unable to establish loopback connection.
@@ -224,6 +242,7 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 6 checkpoint, not a complete submission. The debug panel and
-a verified final APK remain outstanding. Native integration is not implemented. The custom memory
-budget does not cap temporary or total process memory.
+This is a Phase 7 checkpoint, not a complete submission. A verified final APK
+and on-device acceptance checks remain outstanding. Native integration is not
+implemented. The custom memory budget does not cap temporary or total process
+memory.

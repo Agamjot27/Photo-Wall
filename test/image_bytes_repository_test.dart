@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_wall/core/images/disk_image_cache.dart';
@@ -38,6 +39,30 @@ void main() {
       expect(refetched, [1, 2, 3]);
       expect(miss, isFalse);
       expect(downloads, 2);
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
+
+  test('clear prevents an active download from restoring old files', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'photo-wall-clear-test-',
+    );
+    try {
+      final disk = DiskImageCache(directory);
+      await disk.initialize();
+      final response = Completer<Uint8List>();
+      final source = ImageBytesRepository(disk, fetch: (_) => response.future);
+      final request = source.download('photo');
+      await Future<void>.delayed(Duration.zero);
+      expect(source.activeDownloads, 1);
+
+      await source.clearDiskCache();
+      response.complete(Uint8List.fromList([1, 2, 3]));
+      expect(await request, [1, 2, 3]);
+      expect(source.activeDownloads, 0);
+      expect(disk.sizeBytes, 0);
+      expect(await disk.read('photo'), isNull);
     } finally {
       await directory.delete(recursive: true);
     }

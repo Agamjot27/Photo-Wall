@@ -86,4 +86,21 @@ void main() {
     await reopened.initialize();
     expect(reopened.sizeBytes, cache.sizeBytes);
   });
+
+  test('clear removes files and persists an empty index', () async {
+    final cache = DiskImageCache(directory, maxBytes: 100);
+    await cache.initialize();
+    await cache.write('a', bytes(4, 1));
+    await cache.write('b', bytes(4, 2));
+
+    await cache.clear();
+
+    expect(cache.sizeBytes, 0);
+    expect(await cache.read('a'), isNull);
+    final reopened = DiskImageCache(directory, maxBytes: 100);
+    await reopened.initialize();
+    expect(reopened.sizeBytes, 0);
+    expect(await reopened.read('b'), isNull);
+    expect(await directory.list().toList(), hasLength(1));
+  });
 }

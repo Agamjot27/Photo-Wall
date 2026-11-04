@@ -65,6 +65,58 @@ void main() {
     }
   });
 
+  test(
+    'clear leaves an active image usable without refilling either cache',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'photo-wall-clear-loader-',
+      );
+      final memory = MemoryImageCache(maxBytes: 1024);
+      try {
+        final disk = DiskImageCache(directory);
+        await disk.initialize();
+        final started = Completer<void>();
+        final release = Completer<void>();
+        var downloads = 0;
+        final source = ImageBytesRepository(
+          disk,
+          fetch: (_) async {
+            downloads++;
+            if (downloads == 1) {
+              started.complete();
+              await release.future;
+            }
+            return Uint8List.fromList([1]);
+          },
+        );
+        final loader = DecodedImageLoader(
+          repository: Future.value(source),
+          memoryCache: memory,
+          decoder: (bytes, {required fullScreen}) async => makeImage(),
+        );
+        final active = loader.request(photoCatalog.first, fullScreen: false);
+        await started.future;
+
+        await loader.clearCaches();
+        release.complete();
+        final visible = await active.future;
+        expect(visible.width, 2);
+        expect(memory.sizeBytes, 0);
+        expect(disk.sizeBytes, 0);
+        visible.dispose();
+
+        final next = await loader.load(photoCatalog.first, fullScreen: false);
+        next.dispose();
+        expect(downloads, 2);
+        expect(memory.sizeBytes, 16);
+        expect(disk.sizeBytes, 1);
+      } finally {
+        memory.clear();
+        await directory.delete(recursive: true);
+      }
+    },
+  );
+
   testWidgets('late result is disposed and cannot replace another photo', (
     tester,
   ) async {
