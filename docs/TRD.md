@@ -327,9 +327,16 @@ loading and injectable providers for deterministic UI tests. The custom contract
 above remain planned for later phases. Thumbnail sources are 400px square crops;
 the viewer currently caps the longest side at 1600px (below the proposed 4 MP cap).
 
-An Android emulator is now detected, but the agent-session Phase 2 APK build still
-fails with the Gradle loopback error. Phase 2 device interaction/performance
-verification and the final release APK remain pending.
+Phase 3 implements app-private compressed image files, URL-hash keys, an
+access-based 100 MiB eviction policy, index recovery, and disk-first loading.
+It currently buffers each response in memory up to 20 MiB before the serialized
+file write. Streaming downloads, in-flight deduplication, and file-read pinning
+from the proposed design above are pending. Decoded images still use Flutter's
+framework cache.
+
+An Android emulator is now detected, but the agent-session APK build still
+fails with the Gradle loopback error. Device interaction/performance verification
+and the final release APK remain pending.
 
 Before submission, complete the required phases, resolve Android verification,
 review release signing (currently the template's debug signing), and produce a

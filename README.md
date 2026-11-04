@@ -10,9 +10,10 @@ full-screen viewer, back navigation with preserved scroll position, loading
 indicators, and per-image retry controls. Phase 1 was successfully run on Android
 by the project owner.
 
-Image loading currently uses Flutter's NetworkImage and framework image cache.
-This is temporary scaffolding: custom disk/memory caches, concurrency limits, and
-memory-pressure handling remain planned for Phases 3-6.
+Phase 3 now stores compressed images in a custom 100 MiB disk cache. The app
+checks disk before network and retains files across restarts. Decoded images
+still use Flutter's framework cache; the custom 32 MiB memory cache and loading
+scheduler are planned for Phases 4-5.
 Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, loading
 indicator, and retry control. The grid remains a lazy Flutter GridView.
 See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
@@ -94,9 +95,9 @@ side at 1600px without upscaling. Photographer names appear in the viewer.
 
 Tap a tile to open it. Use the app bar back button or Android back to return.
 A spinner indicates loading; the retry icon has a descriptive tooltip and retries
-a failed image after evicting its framework cache entry. The public source may be
-unavailable; the app has no durable offline guarantee until the custom disk cache
-is implemented.
+a failed image after evicting its framework cache entry. Successfully cached image
+variants can load offline until Android clears app cache storage. A cached thumbnail
+does not imply that its separate full-screen variant is cached.
 
 ## Planned memory cache and eviction
 
@@ -105,11 +106,25 @@ Not implemented. The plan is an LRU cache of decoded images with an approximatel
 must allow eviction without invalidating images that widgets still display.
 The cache budget is not a cap on total process memory.
 
-## Planned disk cache and eviction
+## Disk cache and eviction
 
-Not implemented. Downloaded compressed images will persist locally with an
-approximately 100 MB limit and eviction of older entries. Loading will prefer
-memory, then disk, then network.
+The app creates a photo_wall_images directory inside the app's temporary cache.
+Compressed image files use SHA-256 URL keys. A versioned JSON index records file
+size and last access. Reads update recency; writes and index updates are serialized.
+At 100 MiB of committed image files, least-recently-used files are evicted.
+Files larger than the budget are displayed without disk admission. Startup
+reconciles actual file lengths, missing files, stale metadata, partial writes,
+and orphan files. An unreadable or missing entry becomes a network miss.
+
+Downloaded responses are bounded to 20 MiB in memory. Disk write failures from
+the filesystem do not prevent displaying already-downloaded bytes. Temporary
+download buffers and index files are additional usage outside the 100 MiB payload
+budget. The OS may clear the app cache at any time; offline use is best effort.
+Image decode failure from a disk hit invalidates the entry and retries network once.
+
+The planned streaming download and per-file pinning in the TRD are not yet
+implemented. Phase 5 will handle deduplicating and limiting concurrent requests.
+The disk layer does not enforce the memory budget.
 
 ## Planned memory-pressure handling
 
@@ -136,6 +151,8 @@ Validation status:
 - Phase 1 formatting, analysis, and startup test passed.
 - The owner confirmed that Phase 1 runs on Android.
 - Phase 2 automated validation is recorded in the implementation plan.
+- Phase 3 disk cache tests cover restart persistence, LRU eviction, oversized
+  entries, recovery, concurrent writes, and avoiding a repeat download.
 - An Android 15 emulator is now detected as emulator-5556.
 - A Phase 2 debug build from the agent session still fails with
   java.io.IOException: Unable to establish loopback connection.
@@ -153,8 +170,7 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 2 checkpoint, not a complete submission. Custom caches, bounded
-downloads/decodes, explicit decoded-image lifecycle control, memory-pressure
-handling, the debug panel, and a verified final APK remain outstanding.
-Phase 2 uses the framework cache, so it does not yet meet the assignment's custom
-32 MiB memory or 100 MiB disk requirements. Native integration is not implemented.
+This is a Phase 3 checkpoint, not a complete submission. Bounded
+downloads/decodes, the custom decoded memory cache, explicit decoded-image
+lifecycle control, memory-pressure handling, the debug panel, and a verified
+final APK remain outstanding. Native integration is not implemented.

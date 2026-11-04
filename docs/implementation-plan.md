@@ -38,12 +38,18 @@ and controls. Its light/dark and narrow-width behavior is covered by widget test
 
 ## Phase 3 - Disk cache
 
-1. feat: persist downloaded images with cache metadata
-2. feat: enforce disk budget and recover invalid entries
-3. test: verify disk cache persistence and eviction
+1. phase-3: persist bounded image files and cache metadata
+2. phase-3: load photos from disk before network
+3. phase-3: verify disk cache behavior and document tradeoffs
 
 Acceptance: approximately 100 MB cap, safe file writes, predictable eviction,
 restart recovery, and no repeat downloads on valid disk hits.
+
+Implemented: URL-hashed files, persisted index, access-based eviction,
+100 MiB payload cap, startup reconciliation, and disk-first image loading.
+Tests cover restart hits, invalidation, eviction, corrupt metadata, and
+serialized concurrent mutations. Android interaction/build verification
+remains pending in the agent session.
 
 ## Phase 4 - Decoded memory cache
 

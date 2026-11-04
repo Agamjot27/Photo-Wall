@@ -115,12 +115,15 @@ build output. Update README with observed evidence and remaining limitations.
 
 ## Current implementation state
 
-Phases 1-2 provide the Android app foundation, a 100-photo gallery, full-screen
-viewer, loading and retry states, and automated UI/catalog tests. The owner
-confirmed Phase 1 runs on Android. Custom caches, bounded concurrency, memory
-lifecycle handling, diagnostics, and native bonuses remain planned.
+Phases 1-3 provide the Android app foundation, a 100-photo gallery,
+full-screen viewer, loading and retry states, and a custom compressed-image
+disk cache. The cache persists across restarts, checks disk before network,
+and enforces a 100 MiB committed-payload budget with access-based eviction.
+Automated tests cover disk hits, restart recovery, and eviction. The owner
+confirmed the Phase 1 Android launch and Phase 2 scroll/viewer behavior.
 
-Phase 2 device interaction and performance checks are pending. The agent-session
-APK build still encounters a Gradle loopback connection error, despite the
-successful owner-run Phase 1 app. This does not constitute verified completion of
-Android release or performance acceptance criteria.
+The custom decoded memory cache, bounded concurrency, memory lifecycle
+handling, diagnostics, and native bonuses remain planned. Phase 3 device
+interaction and performance checks are pending; the agent-session APK build
+has previously encountered a Gradle loopback connection error. No Android
+release or performance acceptance is claimed yet.
