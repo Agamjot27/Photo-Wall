@@ -343,6 +343,12 @@ for any remaining subscribers; unneeded results are disposed. Different source
 variants are not yet deduplicated together, and active HTTP/codec cancellation
 remains optional.
 
+Phase 6 registers a WidgetsBindingObserver for memory pressure, clears
+cache-owned decoded handles, and advances an admission epoch so earlier
+work cannot refill the cache. Viewer images remain uncached and are disposed
+after their route stops rendering. Tests cover active clone validity,
+observer removal, stale admission, and repeated viewer exits.
+
 An Android emulator is now detected, but the agent-session APK build still
 fails with the Gradle loopback error. Device interaction/performance verification
 and the final release APK remain pending.

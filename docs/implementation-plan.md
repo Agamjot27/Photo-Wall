@@ -83,12 +83,16 @@ remain optional and are not implemented.
 
 ## Phase 6 - Memory lifecycle
 
-1. feat: trim decoded cache on memory pressure
-2. fix: release fullscreen images and unused loading resources
-3. test: verify pressure handling and viewer lifecycle
+1. phase-6: trim decoded cache on memory pressure
+2. phase-6: verify viewer lifecycle and document memory handling
 
 Acceptance: aggressive trimming on memory pressure, safe ownership/disposal,
 and no accumulating full-screen images after repeated navigation.
+
+Implemented: WidgetsBindingObserver lifecycle registration, aggressive cache
+trimming, admission epochs for work started before pressure, and cache cleanup
+on app disposal. Tests cover live clone safety, observer removal, stale work,
+and three viewer open/back cycles with released decoded images.
 
 ## Phase 7 - Diagnostics and UX
 

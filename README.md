@@ -59,7 +59,7 @@ selected-photo navigation, both back paths with scroll retention, image retry,
 stale completion, and disposal during retry. Tests use local image fixtures and
 controlled image providers; they do not depend on live image servers.
 The UI suite also checks the Forui gallery at narrow Android width in dark mode.
-Memory-pressure tests will accompany that implementation.
+Diagnostics tests will accompany the debug panel in Phase 7.
 
 ## Architecture
 
@@ -73,6 +73,7 @@ lib/
     memory_image_cache.dart
     decoded_image_loader.dart
     load_scheduler.dart
+    memory_pressure_observer.dart
   features/photos/
     models/photo.dart
     models/photo_catalog.dart
@@ -91,6 +92,8 @@ test/
   decoded_image_loader_test.dart
   load_scheduler_test.dart
   image_loading_coordination_test.dart
+  memory_pressure_test.dart
+  viewer_lifecycle_test.dart
   support/test_images.dart
 ~~~
 
@@ -124,8 +127,8 @@ disposes only the cache handle; a currently visible clone remains valid. Full-sc
 images are not retained in the shared decoded cache and release their handle on
 route disposal. Thumbnail decoding targets 400px width without upscaling.
 The 32 MiB figure covers cache-owned decoded images, not visible clones,
-in-flight decode buffers, or total process memory. Memory pressure trimming is
-planned for Phase 6.
+in-flight decode buffers, or total process memory. The Phase 6 pressure observer
+trims cache-owned handles when Android reports low memory.
 
 ## Disk cache and eviction
 
@@ -160,12 +163,21 @@ displaying a result, preventing a late response from replacing another photo.
 
 The current scheduler does not prefetch or cancel active HTTP/codec work.
 Different URL variants do not share their compressed source request. Diagnostic
-counters and memory-pressure trimming are planned for later phases.
+Diagnostic counters are planned for Phase 7.
 
-## Planned memory-pressure handling
+## Memory pressure and viewer lifetime
 
-Not implemented. A WidgetsBindingObserver will aggressively trim cached decoded
-images on memory pressure. Full-screen image ownership will be released on exit.
+A lifecycle-owned WidgetsBindingObserver listens for Flutter memory-pressure
+notifications. It drops cache-owned decoded images, increments the eviction
+counter, and advances an admission epoch. A request started before that
+notification may still finish for a visible widget, but its image cannot
+immediately repopulate the cache. Current widget handles remain valid because
+they are separate clones. Disk files are unaffected.
+
+Full-screen images bypass the shared decoded cache. The viewer owns its
+decoded handle and releases it after navigation removes the image from the
+frame. A repeated-open test verifies each prior viewer image is disposed.
+The app also clears cache-owned handles when its root widget is disposed.
 
 ## Optional native integration
 
@@ -193,6 +205,8 @@ Validation status:
   oversized-image admission, memory hits, viewer ownership, and late results.
 - Phase 5 tests cover three-slot scheduling, viewer priority, failure cleanup,
   duplicate-request sharing, independent cancellation, and replacement races.
+- Phase 6 tests cover memory-pressure trimming, stale admission prevention,
+  active-image safety, observer cleanup, and repeated viewer disposal.
 - An Android 15 emulator is now detected as emulator-5556.
 - A Phase 2 debug build from the agent session still fails with
   java.io.IOException: Unable to establish loopback connection.
@@ -210,7 +224,6 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 5 checkpoint, not a complete submission. Memory-pressure handling,
-the debug panel, and a verified final APK
-remain outstanding. Native integration is not implemented. The custom memory
+This is a Phase 6 checkpoint, not a complete submission. The debug panel and
+a verified final APK remain outstanding. Native integration is not implemented. The custom memory
 budget does not cap temporary or total process memory.
