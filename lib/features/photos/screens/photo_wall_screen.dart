@@ -3,6 +3,7 @@ import 'package:forui/forui.dart';
 
 import '../models/photo.dart';
 import '../models/photo_catalog.dart';
+import '../widgets/decoded_photo_image.dart';
 import '../widgets/photo_image.dart';
 import 'photo_viewer_screen.dart';
 
@@ -10,11 +11,13 @@ class PhotoWallScreen extends StatelessWidget {
   const PhotoWallScreen({
     this.photos = photoCatalog,
     this.imageProviderFactory = networkPhotoImageProvider,
+    this.decodedLoader,
     super.key,
   });
 
   final List<Photo> photos;
   final PhotoImageProviderFactory imageProviderFactory;
+  final DecodedPhotoLoader? decodedLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -60,14 +63,21 @@ class PhotoWallScreen extends StatelessWidget {
                             (context) => PhotoViewerScreen(
                               photo: photo,
                               imageProviderFactory: imageProviderFactory,
+                              decodedLoader: decodedLoader,
                             ),
                       ),
                     );
                   },
-                  child: PhotoImage(
-                    photo: photo,
-                    imageProviderFactory: imageProviderFactory,
-                  ),
+                  child:
+                      decodedLoader == null
+                          ? PhotoImage(
+                            photo: photo,
+                            imageProviderFactory: imageProviderFactory,
+                          )
+                          : DecodedPhotoImage(
+                            photo: photo,
+                            loader: decodedLoader!,
+                          ),
                 ),
               ),
             );

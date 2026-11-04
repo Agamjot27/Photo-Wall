@@ -5,7 +5,9 @@ import 'package:forui/forui.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../core/images/disk_image_cache.dart';
+import '../core/images/decoded_image_loader.dart';
 import '../core/images/image_bytes_repository.dart';
+import '../core/images/memory_image_cache.dart';
 import '../features/photos/models/photo.dart';
 import '../features/photos/screens/photo_wall_screen.dart';
 import '../features/photos/widgets/photo_image.dart';
@@ -26,6 +28,10 @@ class PhotoWallApp extends StatefulWidget {
 
 class _PhotoWallAppState extends State<PhotoWallApp> {
   late final Future<ImageBytesRepository> _repository = _openRepository();
+  late final DecodedImageLoader _decodedLoader = DecodedImageLoader(
+    repository: _repository,
+    memoryCache: MemoryImageCache(),
+  );
 
   Future<ImageBytesRepository> _openRepository() async {
     final root = await getTemporaryDirectory();
@@ -67,6 +73,8 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
           ),
       home: PhotoWallScreen(
         imageProviderFactory: widget.imageProviderFactory ?? _imageProvider,
+        decodedLoader:
+            widget.imageProviderFactory == null ? _decodedLoader.load : null,
       ),
     );
   }

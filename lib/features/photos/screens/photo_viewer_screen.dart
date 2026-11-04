@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../models/photo.dart';
+import '../widgets/decoded_photo_image.dart';
 import '../widgets/photo_image.dart';
 
 class PhotoViewerScreen extends StatelessWidget {
   const PhotoViewerScreen({
     required this.photo,
     this.imageProviderFactory = networkPhotoImageProvider,
+    this.decodedLoader,
     super.key,
   });
 
   final Photo photo;
   final PhotoImageProviderFactory imageProviderFactory;
+  final DecodedPhotoLoader? decodedLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -36,11 +39,18 @@ class PhotoViewerScreen extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: PhotoImage(
-          photo: photo,
-          fullScreen: true,
-          imageProviderFactory: imageProviderFactory,
-        ),
+        child:
+            decodedLoader == null
+                ? PhotoImage(
+                  photo: photo,
+                  fullScreen: true,
+                  imageProviderFactory: imageProviderFactory,
+                )
+                : DecodedPhotoImage(
+                  photo: photo,
+                  fullScreen: true,
+                  loader: decodedLoader!,
+                ),
       ),
     );
   }
