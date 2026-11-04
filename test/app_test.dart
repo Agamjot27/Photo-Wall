@@ -8,7 +8,7 @@ void main() {
   testWidgets('app starts on a lazy three-column photo grid', (tester) async {
     final image = MemoryImage(
       base64Decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==',
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
       ),
     );
     await tester.pumpWidget(
@@ -18,6 +18,9 @@ void main() {
         ),
       ),
     );
+    await tester.runAsync(() async {
+      await precacheImage(image, tester.element(find.byType(PhotoWallScreen)));
+    });
     await tester.pumpAndSettle();
 
     expect(find.text('Photo Wall'), findsOneWidget);
