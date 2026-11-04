@@ -13,6 +13,7 @@ class PhotoWallScreen extends StatelessWidget {
     this.imageProviderFactory = networkPhotoImageProvider,
     this.decodedLoader,
     this.decodedRequestFactory,
+    this.onOpenDiagnostics,
     super.key,
   });
 
@@ -20,6 +21,7 @@ class PhotoWallScreen extends StatelessWidget {
   final PhotoImageProviderFactory imageProviderFactory;
   final DecodedPhotoLoader? decodedLoader;
   final DecodedPhotoRequestFactory? decodedRequestFactory;
+  final void Function(BuildContext)? onOpenDiagnostics;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +30,12 @@ class PhotoWallScreen extends StatelessWidget {
       header: FHeader(
         title: const Text('Photo Wall'),
         suffixes: [
+          if (onOpenDiagnostics != null)
+            FHeaderAction(
+              icon: const Icon(FIcons.activity),
+              semanticsLabel: 'Cache diagnostics',
+              onPress: () => onOpenDiagnostics!(context),
+            ),
           Text(
             '${photos.length} photos',
             style: context.theme.typography.sm.copyWith(

@@ -15,24 +15,66 @@ class ImageBytesRepository {
 
   final DiskImageCache cache;
   final ImageFetcher _fetch;
+  int _activeDownloads = 0;
+  int _cacheGeneration = 0;
+  Future<void>? _clearPending;
 
-  Future<(Uint8List, bool)> load(String url) async {
+  int get activeDownloads => _activeDownloads;
+
+  Future<(Uint8List, bool)> load(String url, {bool admitToDisk = true}) async {
+    final generation = _cacheGeneration;
+    await _clearPending;
     final cached = await cache.read(url);
     if (cached != null) return (cached, true);
-    return (await download(url), false);
+    return (
+      await _download(
+        url,
+        admitToDisk: admitToDisk,
+        expectedGeneration: generation,
+      ),
+      false,
+    );
   }
 
-  Future<Uint8List> download(String url) async {
-    final bytes = await _fetch(Uri.parse(url));
+  Future<Uint8List> download(String url, {bool admitToDisk = true}) =>
+      _download(url, admitToDisk: admitToDisk);
+
+  Future<Uint8List> _download(
+    String url, {
+    required bool admitToDisk,
+    int? expectedGeneration,
+  }) async {
+    final generation = expectedGeneration ?? _cacheGeneration;
+    await _clearPending;
+    _activeDownloads++;
+    late final Uint8List bytes;
     try {
-      await cache.write(url, bytes);
-    } on FileSystemException {
-      // A full or unavailable cache cannot prevent displaying downloaded bytes.
+      bytes = await _fetch(Uri.parse(url));
+    } finally {
+      _activeDownloads--;
+    }
+    if (admitToDisk && generation == _cacheGeneration) {
+      try {
+        await cache.write(url, bytes);
+      } on FileSystemException {
+        // A full or unavailable cache cannot prevent displaying downloaded bytes.
+      }
     }
     return bytes;
   }
 
   Future<void> invalidate(String url) => cache.invalidate(url);
+
+  Future<void> clearDiskCache() async {
+    _cacheGeneration++;
+    final clear = cache.clear();
+    _clearPending = clear;
+    try {
+      await clear;
+    } finally {
+      if (identical(_clearPending, clear)) _clearPending = null;
+    }
+  }
 }
 
 Future<Uint8List> fetchImageBytes(Uri url) async {

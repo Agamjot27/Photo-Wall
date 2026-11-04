@@ -31,12 +31,21 @@ class DecodedImageLoader {
   final PhotoDecoder _decoder;
   final Map<String, _SharedLoad> _inFlight = {};
   int _admissionEpoch = 0;
+  int _activeDecodes = 0;
 
   int get inFlightCount => _inFlight.length;
+  int get activeDecodes => _activeDecodes;
 
   void handleMemoryPressure() {
     _admissionEpoch++;
     memoryCache.trimForPressure();
+  }
+
+  Future<void> clearCaches() async {
+    _admissionEpoch++;
+    memoryCache.clear();
+    final source = await repository;
+    await source.clearDiskCache();
   }
 
   Future<ui.Image> load(Photo photo, {required bool fullScreen}) =>
@@ -93,21 +102,36 @@ class DecodedImageLoader {
       if (cached != null) return cached;
     }
     final source = await repository;
-    final (bytes, fromDisk) = await source.load(url);
+    final (bytes, fromDisk) = await source.load(
+      url,
+      admitToDisk: admissionEpoch == _admissionEpoch,
+    );
     ui.Image image;
     try {
-      image = await _decoder(bytes, fullScreen: fullScreen);
+      image = await _decode(bytes, fullScreen: fullScreen);
     } catch (_) {
       if (!fromDisk) rethrow;
       await source.invalidate(url);
-      image = await _decoder(
-        await source.download(url),
+      image = await _decode(
+        await source.download(
+          url,
+          admitToDisk: admissionEpoch == _admissionEpoch,
+        ),
         fullScreen: fullScreen,
       );
     }
     if (fullScreen) return image;
     if (admissionEpoch != _admissionEpoch) return image;
     return memoryCache.admit(key, image);
+  }
+
+  Future<ui.Image> _decode(Uint8List bytes, {required bool fullScreen}) async {
+    _activeDecodes++;
+    try {
+      return await _decoder(bytes, fullScreen: fullScreen);
+    } finally {
+      _activeDecodes--;
+    }
   }
 }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import '../core/images/image_bytes_repository.dart';
 import '../core/images/memory_image_cache.dart';
 import '../core/images/memory_pressure_observer.dart';
 import '../features/photos/models/photo.dart';
+import '../features/photos/screens/cache_diagnostics_screen.dart';
 import '../features/photos/screens/photo_wall_screen.dart';
 import '../features/photos/widgets/photo_image.dart';
 
@@ -54,6 +56,20 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
     );
   }
 
+  void _openDiagnostics(BuildContext context) {
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder:
+              (context) => CacheDiagnosticsScreen(
+                loader: _decodedLoader,
+                repository: _repository,
+              ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -84,6 +100,8 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
             widget.imageProviderFactory == null ? _decodedLoader.load : null,
         decodedRequestFactory:
             widget.imageProviderFactory == null ? _decodedLoader.request : null,
+        onOpenDiagnostics:
+            widget.imageProviderFactory == null ? _openDiagnostics : null,
       ),
     );
   }

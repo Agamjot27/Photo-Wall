@@ -136,6 +136,14 @@ class DiskImageCache {
     await _persist();
   });
 
+  Future<void> clear() => _serialized(() async {
+    _requireReady();
+    for (final key in _entries.keys.toList()) {
+      await _remove(key);
+    }
+    await _persist();
+  });
+
   Future<void> _remove(String key) async {
     final entry = _entries.remove(key);
     if (entry != null) _bytes -= entry.length;
