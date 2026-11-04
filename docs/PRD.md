@@ -115,15 +115,16 @@ build output. Update README with observed evidence and remaining limitations.
 
 ## Current implementation state
 
-Phases 1-3 provide the Android app foundation, a 100-photo gallery,
+Phases 1-4 provide the Android app foundation, a 100-photo gallery,
 full-screen viewer, loading and retry states, and a custom compressed-image
 disk cache. The cache persists across restarts, checks disk before network,
 and enforces a 100 MiB committed-payload budget with access-based eviction.
 Automated tests cover disk hits, restart recovery, and eviction. The owner
 confirmed the Phase 1 Android launch and Phase 2 scroll/viewer behavior.
 
-The custom decoded memory cache, bounded concurrency, memory lifecycle
-handling, diagnostics, and native bonuses remain planned. Phase 3 device
-interaction and performance checks are pending; the agent-session APK build
+Phase 4 adds a custom 32 MiB decoded thumbnail LRU cache with widget-owned
+image handles and uncached full-screen decodes. Bounded concurrency, memory
+pressure handling, diagnostics, and native bonuses remain planned. Phase 4
+device interaction and performance checks are pending; the agent-session APK build
 has previously encountered a Gradle loopback connection error. No Android
 release or performance acceptance is claimed yet.

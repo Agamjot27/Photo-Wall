@@ -10,10 +10,10 @@ full-screen viewer, back navigation with preserved scroll position, loading
 indicators, and per-image retry controls. Phase 1 was successfully run on Android
 by the project owner.
 
-Phase 3 now stores compressed images in a custom 100 MiB disk cache. The app
-checks disk before network and retains files across restarts. Decoded images
-still use Flutter's framework cache; the custom 32 MiB memory cache and loading
-scheduler are planned for Phases 4-5.
+Phase 3 stores compressed images in a custom 100 MiB disk cache. The app checks
+disk before network and retains files across restarts. Phase 4 adds a custom
+32 MiB decoded-image LRU cache for grid thumbnails. The loading scheduler is
+planned for Phase 5.
 Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, loading
 indicator, and retry control. The grid remains a lazy Flutter GridView.
 See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
@@ -67,23 +67,32 @@ Cache, scheduler, and memory-pressure tests will accompany those implementations
 lib/
   main.dart
   app/photo_wall_app.dart
+  core/images/
+    disk_image_cache.dart
+    image_bytes_repository.dart
+    memory_image_cache.dart
+    decoded_image_loader.dart
   features/photos/
     models/photo.dart
     models/photo_catalog.dart
     screens/photo_wall_screen.dart
     screens/photo_viewer_screen.dart
     widgets/photo_image.dart
+    widgets/decoded_photo_image.dart
 test/
   app_test.dart
   photo_catalog_test.dart
   photo_navigation_test.dart
   photo_image_test.dart
+  disk_image_cache_test.dart
+  image_bytes_repository_test.dart
+  memory_image_cache_test.dart
+  decoded_image_loader_test.dart
   support/test_images.dart
 ~~~
 
-UI remains in features/photos. Future loading, decoding, scheduling, and cache
-code will live in core/images, created when those components are implemented.
-Dependencies will be introduced only when needed.
+UI remains in features/photos. Loading, decoding, and both caches live in
+core/images. The scheduler will join them in Phase 5.
 
 ## Photo source and current behavior
 
@@ -95,16 +104,25 @@ side at 1600px without upscaling. Photographer names appear in the viewer.
 
 Tap a tile to open it. Use the app bar back button or Android back to return.
 A spinner indicates loading; the retry icon has a descriptive tooltip and retries
-a failed image after evicting its framework cache entry. Successfully cached image
-variants can load offline until Android clears app cache storage. A cached thumbnail
+a failed image. Successfully cached image variants can load offline until Android
+clears app cache storage. A cached thumbnail
 does not imply that its separate full-screen variant is cached.
 
-## Planned memory cache and eviction
+## Decoded memory cache and eviction
 
-Not implemented. The plan is an LRU cache of decoded images with an approximately
-32 MB budget, explicit byte accounting, and size-aware cache keys. Image ownership
-must allow eviction without invalidating images that widgets still display.
-The cache budget is not a cap on total process memory.
+Grid thumbnails use a custom LRU cache with a hard 32 MiB limit. Each entry owns
+a decoded ui.Image handle and accounts for width * height * 4 bytes. A cache hit
+returns a clone handle to the widget and promotes the entry to most recently used.
+Admission evicts the oldest entries until the new image fits. An image larger than
+the limit is delivered to its current viewer without cache admission.
+
+The widget owns and disposes its clone after it stops rendering. Cache eviction
+disposes only the cache handle; a currently visible clone remains valid. Full-screen
+images are not retained in the shared decoded cache and release their handle on
+route disposal. Thumbnail decoding targets 400px width without upscaling.
+The 32 MiB figure covers cache-owned decoded images, not visible clones,
+in-flight decode buffers, or total process memory. Memory pressure trimming is
+planned for Phase 6.
 
 ## Disk cache and eviction
 
@@ -153,6 +171,8 @@ Validation status:
 - Phase 2 automated validation is recorded in the implementation plan.
 - Phase 3 disk cache tests cover restart persistence, LRU eviction, oversized
   entries, recovery, concurrent writes, and avoiding a repeat download.
+- Phase 4 tests cover decoded-image LRU accounting, active clone safety,
+  oversized-image admission, memory hits, viewer ownership, and late results.
 - An Android 15 emulator is now detected as emulator-5556.
 - A Phase 2 debug build from the agent session still fails with
   java.io.IOException: Unable to establish loopback connection.
@@ -170,7 +190,7 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 3 checkpoint, not a complete submission. Bounded
-downloads/decodes, the custom decoded memory cache, explicit decoded-image
-lifecycle control, memory-pressure handling, the debug panel, and a verified
-final APK remain outstanding. Native integration is not implemented.
+This is a Phase 4 checkpoint, not a complete submission. Bounded downloads
+and decodes, memory-pressure handling, the debug panel, and a verified final APK
+remain outstanding. Native integration is not implemented. The custom memory
+budget does not cap temporary or total process memory.

@@ -53,13 +53,18 @@ remains pending in the agent session.
 
 ## Phase 4 - Decoded memory cache
 
-1. feat: add byte-accounted decoded image LRU cache
-2. feat: integrate thumbnail decoding and cache lookup priority
-3. test: verify memory budget eviction and image ownership
+1. phase-4: add decoded image LRU cache with owned handles
+2. phase-4: render gallery with bounded decoded image cache
+3. phase-4: document memory ownership and verify integration
 
 Acceptance: approximately 32 MB cache cap; memory then disk then network;
 keys include identity and decode size; evicted images remain safe for active users.
 Oversized images must not break the cache cap.
+
+Implemented: decoded thumbnail LRU with a 32 MiB cap, cache-owned handles,
+widget-owned clones, target-sized decoding, disk-then-network fallback,
+and uncached viewer images. Tests cover LRU, oversized images, cache hits,
+stale results, and disposal. Android verification remains pending.
 
 ## Phase 5 - Loading coordination
 

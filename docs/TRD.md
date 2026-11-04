@@ -323,16 +323,18 @@ and documentation, including the PRD/TRD baseline.
 
 Phase 1 formatting, analysis, and startup test passed; the owner confirmed an
 Android launch. Phase 2 implements gallery/viewer flows with temporary NetworkImage
-loading and injectable providers for deterministic UI tests. The custom contracts
-above remain planned for later phases. Thumbnail sources are 400px square crops;
+loading and injectable providers for deterministic UI tests. Thumbnail sources are 400px square crops;
 the viewer currently caps the longest side at 1600px (below the proposed 4 MP cap).
 
 Phase 3 implements app-private compressed image files, URL-hash keys, an
 access-based 100 MiB eviction policy, index recovery, and disk-first loading.
 It currently buffers each response in memory up to 20 MiB before the serialized
 file write. Streaming downloads, in-flight deduplication, and file-read pinning
-from the proposed design above are pending. Decoded images still use Flutter's
-framework cache.
+from the proposed design above are pending. Phase 4 replaced the production
+decoded-image path with a 32 MiB LRU cache.
+Thumbnail images use 400px target decoding; widgets hold cloned image handles,
+while full-screen images are not admitted to the shared decoded cache.
+The legacy framework ImageProvider remains only as an injectable test path.
 
 An Android emulator is now detected, but the agent-session APK build still
 fails with the Gradle loopback error. Device interaction/performance verification
