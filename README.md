@@ -25,6 +25,7 @@ See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
 - [Product requirements](docs/PRD.md): assignment scope, user flows, and acceptance criteria.
 - [Technical requirements](docs/TRD.md): architecture, cache ownership, concurrency, and verification.
 - [Implementation plan](docs/implementation-plan.md): delivery phases and commit boundaries.
+- [Android release checklist](docs/release-checklist.md): build, device checks, and recorded evidence.
 
 The requirements documents describe the intended implementation; the current status
 above records what exists today.
@@ -62,7 +63,8 @@ stale completion, and disposal during retry. Tests use local image fixtures and
 controlled image providers; they do not depend on live image servers.
 The UI suite also checks the Forui gallery at narrow Android width in dark mode.
 Diagnostics and cache-clear tests cover active-download races and persisted
-disk clearing.
+disk clearing. Phase 8 acceptance tests follow a photo through memory, disk,
+offline restart, and corrupt-disk recovery using the real decoder.
 
 ## Architecture
 
@@ -98,6 +100,7 @@ test/
   image_loading_coordination_test.dart
   memory_pressure_test.dart
   viewer_lifecycle_test.dart
+  photo_pipeline_acceptance_test.dart
   support/test_images.dart
 ~~~
 
@@ -228,10 +231,13 @@ Validation status:
   active-image safety, observer cleanup, and repeated viewer disposal.
 - Phase 7 tests cover persisted clearing and a download already running when
   the user clears both caches.
+- Phase 8 tests cover cold/warm cache paths, offline restart, and corrupt-disk
+  recovery using the production decoder.
 - An Android 15 emulator is now detected as emulator-5556.
-- A Phase 2 debug build from the agent session still fails with
-  java.io.IOException: Unable to establish loopback connection.
-  This is separate from the owner's successful local Phase 1 launch.
+- The agent-session release build fails before Android compilation because the
+  Gradle client cannot open its local daemon socket (`PipeImpl`,
+  `Invalid argument: connect`). This is separate from the owner's successful
+  local launch and does not establish whether the release APK builds locally.
 - Phase 2 on-device interaction and performance verification remain pending.
 
 To verify Phase 2 locally, restart the running app (or run flutter run), scroll
@@ -245,7 +251,7 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 7 checkpoint, not a complete submission. A verified final APK
+This is a Phase 8 checkpoint, not a complete submission. A verified final APK
 and on-device acceptance checks remain outstanding. Native integration is not
 implemented. The custom memory budget does not cap temporary or total process
 memory.

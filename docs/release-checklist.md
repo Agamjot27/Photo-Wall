@@ -1,0 +1,44 @@
+# Android release verification
+
+Use this checklist before publishing the APK. Record the Android device or emulator,
+API level, Flutter version, build mode, date, and any visible frame stalls.
+
+## Build and install
+
+From the repository root:
+
+~~~sh
+flutter pub get
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze
+flutter test
+flutter build apk --release
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+~~~
+
+The current release configuration uses the debug signing key. This produces an
+installable APK for assignment review; do not use it as a store signing setup.
+Keep the APK out of Git history and attach it to the GitHub release.
+
+## On-device acceptance
+
+- [ ] Cold launch shows a three-column grid and photos load without blocking scroll.
+- [ ] Scroll through all 100 entries; visible cells keep the correct photo.
+- [ ] Open several photos, including one near the end; each viewer shows the
+      selected image and both back paths return to the previous grid position.
+- [ ] Reopen a recently viewed thumbnail and viewer; cache counters reflect usage.
+- [ ] Restart the app, then revisit cached images while offline. Uncached images
+      show Retry and recover when connectivity returns.
+- [ ] Open diagnostics and check memory/disk bytes, evictions, active downloads,
+      active decodes, and queued jobs. Clear caches; visible images remain usable.
+- [ ] Repeat viewer open/back several times and inspect memory in profile mode for
+      continually retained viewer images or repeated frame-budget overruns.
+- [ ] Install and launch the final release APK on Android.
+
+## Evidence so far
+
+- Automated formatting, analysis, and 33 tests pass on 2026-11-05.
+- A debug emulator displayed the grid and full-screen viewer after a hot restart.
+- The agent-session release build fails before Android compilation when Gradle
+  attempts to connect its local daemon (`PipeImpl`, `Invalid argument: connect`).
+  A release APK and profile-mode observations are therefore still pending.

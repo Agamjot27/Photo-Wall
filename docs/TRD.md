@@ -30,7 +30,7 @@ SDK when implementing. No SDK upgrade is required by this document.
 | MemoryImageCache | Decoded image LRU, byte accounting, eviction statistics, and cache-owned handles. |
 | DiskImageCache | Stable file keys, index recovery, serialized file/index changes, budget enforcement. |
 | ImageDecoder | Target-sized decoding with cleanup; replaceable implementation for optional Android integration. |
-| CacheDiagnostics | Immutable snapshots of counters, exposed through a lightweight notifier. |
+| CacheDiagnosticsScreen | Displays live counters while open and offers manual clearing. |
 | MemoryPressureObserver | Registers/unregisters with WidgetsBinding and requests aggressive memory trimming. |
 
 Use constructor injection for filesystem location, HTTP client, decoder, clock,
@@ -72,7 +72,7 @@ management and eviction remain project code.
 | Active pipeline jobs | 3, shared by thumbnail and viewer requests. |
 | Thumbnail target | Physical cell dimensions derived from layout and device pixel ratio; no upscaling. |
 | Viewer target | Fit within physical viewport, with a proposed 4-megapixel output cap. |
-| Network timeout | Proposed 20-second total attempt deadline; no infinite automatic retries. |
+| Network timeout | Implemented 30-second total attempt deadline; no infinite automatic retries. |
 | Compressed response limit | Proposed 20 MiB per response, enforced while streaming even without Content-Length. |
 
 Binary limits are the project's interpretation of the brief's approximate MB
@@ -349,9 +349,16 @@ work cannot refill the cache. Viewer images remain uncached and are disposed
 after their route stops rendering. Tests cover active clone validity,
 observer removal, stale admission, and repeated viewer exits.
 
-An Android emulator is now detected, but the agent-session APK build still
-fails with the Gradle loopback error. Device interaction/performance verification
-and the final release APK remain pending.
+Phase 7 adds a live diagnostics screen and manual clear action. The clear
+barrier prevents older downloads and decodes from refilling the caches. A
+30-second total network deadline and visible Retry label handle stalled and
+failed requests. Phase 8 acceptance tests now cover cache priority across a
+process-style restart and recovery from corrupt disk bytes with a real decoder.
+
+An Android emulator is detected. Debug grid and viewer interaction was observed,
+but profile-mode performance verification and the final release APK remain
+pending. The agent-session Gradle client fails before compilation when opening
+its local daemon connection (`PipeImpl` / `Invalid argument: connect`).
 
 Before submission, complete the required phases, resolve Android verification,
 review release signing (currently the template's debug signing), and produce a

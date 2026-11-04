@@ -119,6 +119,11 @@ Acceptance: required behavior verified, Android performance inspected, README
 complete, working release APK smoke-tested, public repository and APK ready.
 Keep artifacts out of source history; distribute the APK as a release attachment.
 
+In progress: acceptance tests exercise cold/warm loading, disk fallback, offline
+restart, and corrupt-disk recovery through the real decoder. The release build
+is currently blocked in the agent session by Gradle's local daemon socket error,
+before Android compilation. Profile-mode and final APK checks remain open.
+
 ## Optional phase 9 - Native Android bonus
 
 1. feat(android): add downsampled decoding MethodChannel

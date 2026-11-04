@@ -81,7 +81,7 @@ that a separate full-screen network variant is available offline.
 | --- | --- | --- |
 | O01 | Request cancellation | Cancel no-longer-needed downloads where feasible; required stale-result ignoring does not depend on cancellation. |
 | O02 | Decode cancellation | Cancel pending decode work; if a native decode cannot stop, discard its result safely. |
-| O03 | Manual cache clear | Clear cached content safely during active work. Planned for Phase 7, but optional in the assignment. |
+| O03 | Manual cache clear | Clear cached content safely during active work. Implemented in Phase 7; optional in the assignment. |
 | O04 | Android native integration | Implement decodeDownsampled and getMemoryInfo over the specified MethodChannel, then use native decoding for grid thumbnails. |
 | O05 | iOS integration | Additional bonus only; not currently scheduled. |
 
@@ -115,7 +115,7 @@ build output. Update README with observed evidence and remaining limitations.
 
 ## Current implementation state
 
-Phases 1-6 provide the Android app foundation, a 100-photo gallery,
+Phases 1-7 provide the Android app foundation, a 100-photo gallery,
 full-screen viewer, loading and retry states, and a custom compressed-image
 disk cache. The cache persists across restarts, checks disk before network,
 and enforces a 100 MiB committed-payload budget with access-based eviction.
@@ -126,7 +126,8 @@ Phase 4 adds a custom 32 MiB decoded thumbnail LRU cache with widget-owned
 image handles and uncached full-screen decodes. Phase 5 adds a three-job scheduler,
 viewer priority, shared identical requests,
 and queued cancellation. Phase 6 adds memory-pressure trimming and viewer image
-lifecycle checks. Diagnostics and native bonuses remain planned. Phase 6 device interaction and
-performance checks are pending; the agent-session APK build
-has previously encountered a Gradle loopback connection error. No Android
-release or performance acceptance is claimed yet.
+lifecycle checks. Phase 7 adds live diagnostics, safe manual clearing, a bounded
+network request, and explicit Retry state. Phase 8 acceptance tests cover the
+cold, memory-hit, disk-hit, offline-restart, and corrupt-disk paths. Native work
+remains optional. Android performance checks and a verified release APK remain
+pending; the agent-session Gradle client fails to connect to its local daemon.
