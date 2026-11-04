@@ -12,12 +12,14 @@ class PhotoWallScreen extends StatelessWidget {
     this.photos = photoCatalog,
     this.imageProviderFactory = networkPhotoImageProvider,
     this.decodedLoader,
+    this.decodedRequestFactory,
     super.key,
   });
 
   final List<Photo> photos;
   final PhotoImageProviderFactory imageProviderFactory;
   final DecodedPhotoLoader? decodedLoader;
+  final DecodedPhotoRequestFactory? decodedRequestFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +66,7 @@ class PhotoWallScreen extends StatelessWidget {
                               photo: photo,
                               imageProviderFactory: imageProviderFactory,
                               decodedLoader: decodedLoader,
+                              decodedRequestFactory: decodedRequestFactory,
                             ),
                       ),
                     );
@@ -77,6 +80,7 @@ class PhotoWallScreen extends StatelessWidget {
                           : DecodedPhotoImage(
                             photo: photo,
                             loader: decodedLoader!,
+                            requestFactory: decodedRequestFactory,
                           ),
                 ),
               ),

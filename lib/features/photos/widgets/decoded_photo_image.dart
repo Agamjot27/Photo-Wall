@@ -4,21 +4,26 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../../../core/images/decoded_image_loader.dart';
 import '../models/photo.dart';
 
 typedef DecodedPhotoLoader =
     Future<ui.Image> Function(Photo photo, {required bool fullScreen});
+typedef DecodedPhotoRequestFactory =
+    ImageLoadRequest Function(Photo photo, {required bool fullScreen});
 
 class DecodedPhotoImage extends StatefulWidget {
   const DecodedPhotoImage({
     required this.photo,
     required this.loader,
+    this.requestFactory,
     this.fullScreen = false,
     super.key,
   });
 
   final Photo photo;
   final DecodedPhotoLoader loader;
+  final DecodedPhotoRequestFactory? requestFactory;
   final bool fullScreen;
 
   @override
@@ -29,6 +34,7 @@ class _DecodedPhotoImageState extends State<DecodedPhotoImage> {
   ui.Image? _image;
   bool _failed = false;
   int _generation = 0;
+  ImageLoadRequest? _activeRequest;
 
   @override
   void initState() {
@@ -39,10 +45,15 @@ class _DecodedPhotoImageState extends State<DecodedPhotoImage> {
   Future<void> _load() async {
     final generation = _generation;
     try {
-      final image = await widget.loader(
+      final request = widget.requestFactory?.call(
         widget.photo,
         fullScreen: widget.fullScreen,
       );
+      _activeRequest = request;
+      final image =
+          await (request?.future ??
+              widget.loader(widget.photo, fullScreen: widget.fullScreen));
+      if (identical(_activeRequest, request)) _activeRequest = null;
       if (!mounted || generation != _generation) {
         image.dispose();
         return;
@@ -65,8 +76,11 @@ class _DecodedPhotoImageState extends State<DecodedPhotoImage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.photo != widget.photo ||
         oldWidget.fullScreen != widget.fullScreen ||
-        oldWidget.loader != widget.loader) {
+        oldWidget.loader != widget.loader ||
+        oldWidget.requestFactory != widget.requestFactory) {
       _generation++;
+      _activeRequest?.cancel();
+      _activeRequest = null;
       _releaseAfterFrame(_image);
       _image = null;
       _failed = false;
@@ -76,6 +90,8 @@ class _DecodedPhotoImageState extends State<DecodedPhotoImage> {
 
   void _retry() {
     _generation++;
+    _activeRequest?.cancel();
+    _activeRequest = null;
     _releaseAfterFrame(_image);
     setState(() {
       _image = null;
@@ -87,6 +103,7 @@ class _DecodedPhotoImageState extends State<DecodedPhotoImage> {
   @override
   void dispose() {
     _generation++;
+    _activeRequest?.cancel();
     _releaseAfterFrame(_image);
     super.dispose();
   }

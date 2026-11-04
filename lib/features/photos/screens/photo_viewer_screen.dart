@@ -10,12 +10,14 @@ class PhotoViewerScreen extends StatelessWidget {
     required this.photo,
     this.imageProviderFactory = networkPhotoImageProvider,
     this.decodedLoader,
+    this.decodedRequestFactory,
     super.key,
   });
 
   final Photo photo;
   final PhotoImageProviderFactory imageProviderFactory;
   final DecodedPhotoLoader? decodedLoader;
+  final DecodedPhotoRequestFactory? decodedRequestFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +52,7 @@ class PhotoViewerScreen extends StatelessWidget {
                   photo: photo,
                   fullScreen: true,
                   loader: decodedLoader!,
+                  requestFactory: decodedRequestFactory,
                 ),
       ),
     );

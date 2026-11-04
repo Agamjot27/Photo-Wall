@@ -75,6 +75,8 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
         imageProviderFactory: widget.imageProviderFactory ?? _imageProvider,
         decodedLoader:
             widget.imageProviderFactory == null ? _decodedLoader.load : null,
+        decodedRequestFactory:
+            widget.imageProviderFactory == null ? _decodedLoader.request : null,
       ),
     );
   }
