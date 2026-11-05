@@ -45,7 +45,7 @@ iOS support as verified.
 
 ## Evidence so far
 
-- Automated formatting, analysis, and 43 tests pass locally on 2026-11-06.
+- Automated formatting, analysis, and 46 tests passed locally on 2026-11-06.
 - A debug emulator displayed the grid and full-screen viewer after a hot restart.
 - The Phase 8 baseline GitHub workflow succeeded and uploaded an APK artifact,
   but that artifact has not been installed or smoke-tested. It predates the
@@ -55,7 +55,7 @@ iOS support as verified.
   clearing, and reopening a cached photo after an offline app restart.
 - The Phase 10 Android APK and iOS simulator builds passed. The owner has not
   installed the Phase 10 APK, and iOS runtime testing remains open.
-- This Codex session cannot complete a local Gradle build because the daemon
-  cannot establish its loopback connection. The final source still needs the
-  cloud Android build and emulator smoke test. Physical-device profile
-  observations remain unavailable.
+- The local Gradle release build failed on 2026-11-06 because it could not
+  establish a loopback connection. The final source still needs the cloud
+  Android build and emulator smoke test. Physical-device profile observations
+  remain unavailable.

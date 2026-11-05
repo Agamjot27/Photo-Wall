@@ -52,7 +52,7 @@ URLs preserve aspect ratio and cap the longest side at 1600 px. Tapping a tile
 opens the full-screen viewer; Back returns to the same grid scroll position.
 
 The activity button in the gallery header toggles a small **live cache panel over
-the grid**. It shows memory and disk bytes, memory evictions, and ongoing
+the grid**. It shows memory and disk usage in MiB, memory evictions, and ongoing
 downloads and decodes while the gallery scrolls. Its **Details / clear** button
 opens the full diagnostics screen, including manual cache clearing and Android
 memory information.
@@ -134,22 +134,24 @@ available, total, threshold, and low-memory values for the detailed panel.
   different signing key cannot replace it without uninstalling the old build,
   which clears that app's local cache and data.
 
-## 8. Incomplete features and validation
+## 8. Validation and remaining limitations
 
 The required Android features are implemented. Automated tests cover cache
 budgets and eviction, restart and corrupt-file recovery, concurrency, native
 fallback, stale results, navigation, memory pressure, and the live panel.
-Formatting, analysis, and Flutter tests must pass before delivery.
+Formatting, analysis, and 46 Flutter tests passed locally on 6 November 2026.
 
 The [Phase 9 Android workflow](https://github.com/Agamjot27/Photo-Wall/actions/runs/41979856858)
-built an APK that the project owner installed on an Android Studio emulator.
+built an APK that was installed on an Android Studio emulator.
 Gallery/viewer navigation, diagnostics, cache clearing, and reopening a cached
 photo offline worked there. The [Phase 10 Android APK](https://github.com/Agamjot27/Photo-Wall/actions/runs/41992822705)
 and [iOS simulator build](https://github.com/Agamjot27/Photo-Wall/actions/runs/41992822607)
-passed CI. Current local changes still need CI compilation and a smoke check of
-their final Android APK. Physical-device performance profiling and an iOS
-runtime test have not been performed. A durable GitHub Release APK attachment
-is still needed for submission.
+passed CI. The four subsequent gallery UI commits and this diagnostics update
+have not yet been built in CI. Their release APK needs an emulator smoke test
+before publication. A local release build could not complete because Gradle
+failed to establish a loopback connection in this environment.
+Physical-device performance profiling and an iOS runtime test have not been
+performed. The Android APK has not yet been attached to a GitHub Release.
 
 See the [product requirements](docs/PRD.md), [technical design](docs/TRD.md),
 [phase history](docs/implementation-plan.md), and [release checklist](docs/release-checklist.md)

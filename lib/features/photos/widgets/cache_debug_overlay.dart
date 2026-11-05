@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/images/cache_size_format.dart';
 import '../../../core/images/decoded_image_loader.dart';
 import '../../../core/images/image_bytes_repository.dart';
 
@@ -63,14 +64,15 @@ class _CacheDebugOverlayState extends State<CacheDebugOverlay> {
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   Text(
-                    'Memory ${memory.sizeBytes} / ${memory.maxBytes} B',
+                    'Memory ${formatCacheSize(memory.sizeBytes)} / '
+                    '${formatCacheSize(memory.maxBytes)}',
                     style: textStyle,
                   ),
                   Text(
                     repository == null
                         ? 'Disk loading…'
-                        : 'Disk ${repository.cache.sizeBytes} / '
-                            '${repository.cache.maxBytes} B',
+                        : 'Disk ${formatCacheSize(repository.cache.sizeBytes)} / '
+                            '${formatCacheSize(repository.cache.maxBytes)}',
                     style: textStyle,
                   ),
                   Text('Evictions ${memory.evictionCount}', style: textStyle),

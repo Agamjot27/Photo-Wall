@@ -42,7 +42,7 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Cache diagnostics'), findsOneWidget);
-      expect(find.text('3 B / 104857600 B'), findsOneWidget);
+      expect(find.text('0.00 MiB / 100.00 MiB'), findsOneWidget);
       expect(find.text('Memory evictions'), findsOneWidget);
       expect(find.text('Ongoing downloads'), findsOneWidget);
       expect(find.text('Ongoing decodes'), findsOneWidget);

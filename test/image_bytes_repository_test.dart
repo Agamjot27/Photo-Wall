@@ -57,6 +57,39 @@ void main() {
     }
   });
 
+  test('a non-200 response fails without returning its body', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      request.response.write('unavailable');
+      await request.response.close();
+    });
+    try {
+      final url = Uri.parse('http://127.0.0.1:${server.port}/photo');
+      await expectLater(fetchImageBytes(url), throwsA(isA<HttpException>()));
+    } finally {
+      await server.close(force: true);
+    }
+  });
+
+  test('a response larger than 20 MiB is rejected', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      try {
+        request.response.add(Uint8List(20 * 1024 * 1024 + 1));
+        await request.response.close();
+      } on IOException {
+        // The client closes the connection as soon as it exceeds the limit.
+      }
+    });
+    try {
+      final url = Uri.parse('http://127.0.0.1:${server.port}/photo');
+      await expectLater(fetchImageBytes(url), throwsA(isA<FormatException>()));
+    } finally {
+      await server.close(force: true);
+    }
+  });
+
   test(
     'cancelling one download does not close another shared request',
     () async {

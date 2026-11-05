@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../../../app/circle_theme.dart';
+import '../../../core/images/cache_size_format.dart';
 import '../../../core/images/decoded_image_loader.dart';
 import '../../../core/images/image_bytes_repository.dart';
 import '../../../core/images/native_image_bridge.dart';
@@ -137,11 +138,13 @@ class _CacheDiagnosticsScreenState extends State<CacheDiagnosticsScreen> {
               const SizedBox(height: 16),
               _Metric(
                 'Decoded memory cache',
-                '${memory.sizeBytes} B / ${memory.maxBytes} B',
+                '${formatCacheSize(memory.sizeBytes)} / '
+                    '${formatCacheSize(memory.maxBytes)}',
               ),
               _Metric(
                 'Disk cache',
-                '${repository.cache.sizeBytes} B / ${repository.cache.maxBytes} B',
+                '${formatCacheSize(repository.cache.sizeBytes)} / '
+                    '${formatCacheSize(repository.cache.maxBytes)}',
               ),
               _Metric('Memory evictions', '${memory.evictionCount}'),
               _Metric('Ongoing downloads', '${repository.activeDownloads}'),
@@ -154,11 +157,14 @@ class _CacheDiagnosticsScreenState extends State<CacheDiagnosticsScreen> {
                 const Divider(height: 32),
                 Text('Android memory', style: context.theme.typography.lg),
                 if (_nativeInfo != null) ...[
-                  _Metric('Available', '${_nativeInfo!.availMemBytes} B'),
-                  _Metric('Total', '${_nativeInfo!.totalMemBytes} B'),
+                  _Metric(
+                    'Available',
+                    formatCacheSize(_nativeInfo!.availMemBytes),
+                  ),
+                  _Metric('Total', formatCacheSize(_nativeInfo!.totalMemBytes)),
                   _Metric(
                     'Low-memory threshold',
-                    '${_nativeInfo!.thresholdBytes} B',
+                    formatCacheSize(_nativeInfo!.thresholdBytes),
                   ),
                   _Metric('Low memory', _nativeInfo!.lowMemory ? 'Yes' : 'No'),
                 ] else if (_nativeInfoUnavailable)
