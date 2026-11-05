@@ -5,10 +5,14 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.CancellationException
 import kotlin.math.roundToInt
 
 internal object NativeImageMethods {
-    fun decodeDownsampled(arguments: Any?): Map<String, Any> {
+    fun decodeDownsampled(
+        arguments: Any?,
+        isCancelled: () -> Boolean = { false },
+    ): Map<String, Any> {
         val args = arguments as? Map<*, *>
             ?: throw IllegalArgumentException("Expected image arguments")
         val path = args["path"] as? String
@@ -34,8 +38,11 @@ internal object NativeImageMethods {
             else -> throw IllegalArgumentException("Unsupported output format")
         }
 
+        if (isCancelled()) throw CancellationException()
+
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         decode(path, bytes, bounds)
+        if (isCancelled()) throw CancellationException()
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
             throw IllegalArgumentException("Invalid or unsupported image")
         }
@@ -51,28 +58,34 @@ internal object NativeImageMethods {
         }
         val decoded = decode(path, bytes, options)
             ?: throw IllegalArgumentException("Invalid or unsupported image")
-        val scale = minOf(
-            1.0,
-            maxWidth.toDouble() / decoded.width,
-            maxHeight.toDouble() / decoded.height,
-        )
-        val width = maxOf(1, (decoded.width * scale).roundToInt())
-        val height = maxOf(1, (decoded.height * scale).roundToInt())
-        val output = if (width == decoded.width && height == decoded.height) {
-            decoded
-        } else {
-            Bitmap.createScaledBitmap(decoded, width, height, true)
-        }
         try {
-            val compressed = ByteArrayOutputStream().use { stream ->
-                if (!output.compress(compressFormat, 90, stream)) {
-                    throw IllegalStateException("Could not encode image")
-                }
-                stream.toByteArray()
+            if (isCancelled()) throw CancellationException()
+            val scale = minOf(
+                1.0,
+                maxWidth.toDouble() / decoded.width,
+                maxHeight.toDouble() / decoded.height,
+            )
+            val width = maxOf(1, (decoded.width * scale).roundToInt())
+            val height = maxOf(1, (decoded.height * scale).roundToInt())
+            val output = if (width == decoded.width && height == decoded.height) {
+                decoded
+            } else {
+                Bitmap.createScaledBitmap(decoded, width, height, true)
             }
-            return mapOf("width" to width, "height" to height, "bytes" to compressed)
+            try {
+                if (isCancelled()) throw CancellationException()
+                val compressed = ByteArrayOutputStream().use { stream ->
+                    if (!output.compress(compressFormat, 90, stream)) {
+                        throw IllegalStateException("Could not encode image")
+                    }
+                    stream.toByteArray()
+                }
+                if (isCancelled()) throw CancellationException()
+                return mapOf("width" to width, "height" to height, "bytes" to compressed)
+            } finally {
+                if (output !== decoded) output.recycle()
+            }
         } finally {
-            if (output !== decoded) output.recycle()
             decoded.recycle()
         }
     }

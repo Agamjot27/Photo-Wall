@@ -4,6 +4,8 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
+  private var cancellations: [Int: CancellationFlag] = [:]
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -16,20 +18,45 @@ import UIKit
     channel.setMethodCallHandler { call, result in
       switch call.method {
       case "decodeDownsampled":
+        guard let requestId = (call.arguments as? [String: Any])?["requestId"] as? Int
+        else {
+          result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing request ID", details: nil))
+          return
+        }
+        let cancellation = CancellationFlag()
+        self.cancellations[requestId] = cancellation
         DispatchQueue.global(qos: .userInitiated).async {
           do {
-            let decoded = try Self.decodeDownsampled(call.arguments)
-            DispatchQueue.main.async { result(decoded) }
+            let decoded = try Self.decodeDownsampled(call.arguments) {
+              cancellation.isCancelled
+            }
+            DispatchQueue.main.async {
+              self.cancellations.removeValue(forKey: requestId)
+              if cancellation.isCancelled {
+                result(FlutterError(code: "CANCELLED", message: "Image decode cancelled", details: nil))
+              } else {
+                result(decoded)
+              }
+            }
           } catch {
             DispatchQueue.main.async {
+              self.cancellations.removeValue(forKey: requestId)
               result(FlutterError(
-                code: "DECODE_FAILED",
+                code: cancellation.isCancelled ? "CANCELLED" : "DECODE_FAILED",
                 message: error.localizedDescription,
                 details: nil
               ))
             }
           }
         }
+      case "cancelDecode":
+        guard let requestId = (call.arguments as? [String: Any])?["requestId"] as? Int
+        else {
+          result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing request ID", details: nil))
+          return
+        }
+        self.cancellations[requestId]?.cancel()
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -38,7 +65,10 @@ import UIKit
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  private static func decodeDownsampled(_ arguments: Any?) throws -> [String: Any] {
+  private static func decodeDownsampled(
+    _ arguments: Any?,
+    isCancelled: () -> Bool
+  ) throws -> [String: Any] {
     guard let args = arguments as? [String: Any],
       let maxWidth = args["maxWidth"] as? Int,
       let maxHeight = args["maxHeight"] as? Int,
@@ -46,6 +76,7 @@ import UIKit
       maxHeight > 0,
       let format = args["format"] as? String
     else { throw ImageChannelError.invalidArguments }
+    if isCancelled() { throw ImageChannelError.cancelled }
 
     let path = args["path"] as? String
     let inputBytes = (args["bytes"] as? FlutterStandardTypedData)?.data
@@ -60,10 +91,12 @@ import UIKit
     } else {
       throw ImageChannelError.invalidArguments
     }
+    if isCancelled() { throw ImageChannelError.cancelled }
 
     guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
       throw ImageChannelError.invalidImage
     }
+    if isCancelled() { throw ImageChannelError.cancelled }
     let options: [CFString: Any] = [
       kCGImageSourceCreateThumbnailFromImageAlways: true,
       kCGImageSourceCreateThumbnailWithTransform: true,
@@ -71,6 +104,7 @@ import UIKit
     ]
     guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     else { throw ImageChannelError.invalidImage }
+    if isCancelled() { throw ImageChannelError.cancelled }
 
     let scale = min(
       1.0,
@@ -89,6 +123,7 @@ import UIKit
         image.draw(in: CGRect(x: 0, y: 0, width: width, height: height))
       }
     }
+    if isCancelled() { throw ImageChannelError.cancelled }
     let compressed: Data?
     switch format.lowercased() {
     case "png": compressed = output.pngData()
@@ -98,6 +133,7 @@ import UIKit
     guard let compressed = compressed, !compressed.isEmpty else {
       throw ImageChannelError.invalidImage
     }
+    if isCancelled() { throw ImageChannelError.cancelled }
     return [
       "width": width,
       "height": height,
@@ -109,11 +145,30 @@ import UIKit
 private enum ImageChannelError: LocalizedError {
   case invalidArguments
   case invalidImage
+  case cancelled
 
   var errorDescription: String? {
     switch self {
     case .invalidArguments: return "Invalid image request"
     case .invalidImage: return "Could not decode image"
+    case .cancelled: return "Image decode cancelled"
     }
+  }
+}
+
+private final class CancellationFlag {
+  private let lock = NSLock()
+  private var cancelled = false
+
+  func cancel() {
+    lock.lock()
+    cancelled = true
+    lock.unlock()
+  }
+
+  var isCancelled: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return cancelled
   }
 }

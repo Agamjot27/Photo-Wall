@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/services.dart';
+
+import 'load_scheduler.dart';
 
 class NativeDecodedImage {
   const NativeDecodedImage(this.width, this.height, this.bytes);
@@ -28,6 +33,7 @@ class NativeImageBridge {
           channel ?? const MethodChannel('com.assignment.photowall/image');
 
   final MethodChannel _channel;
+  static int _nextRequestId = Random.secure().nextInt(1 << 30);
 
   Future<NativeDecodedImage> decodeDownsampled({
     String? path,
@@ -35,6 +41,7 @@ class NativeImageBridge {
     required int maxWidth,
     required int maxHeight,
     String format = 'png',
+    LoadCancellation? cancellation,
   }) async {
     if ((path == null) == (bytes == null)) {
       throw ArgumentError('Provide exactly one of path or bytes');
@@ -42,14 +49,41 @@ class NativeImageBridge {
     if (maxWidth <= 0 || maxHeight <= 0) {
       throw ArgumentError('Output dimensions must be positive');
     }
-    final result = await _channel
-        .invokeMapMethod<String, dynamic>('decodeDownsampled', {
-          'path': path,
-          'bytes': bytes,
-          'maxWidth': maxWidth,
-          'maxHeight': maxHeight,
-          'format': format,
-        });
+    cancellation?.throwIfCancelled();
+    final requestId = ++_nextRequestId;
+    var completed = false;
+    if (cancellation != null) {
+      unawaited(
+        cancellation.whenCancelled.then((_) async {
+          if (completed) return;
+          try {
+            await _channel.invokeMethod<void>('cancelDecode', {
+              'requestId': requestId,
+            });
+          } catch (_) {
+            // The originating decode still checks cancellation before returning.
+          }
+        }),
+      );
+    }
+    Map<String, dynamic>? result;
+    try {
+      result = await _channel
+          .invokeMapMethod<String, dynamic>('decodeDownsampled', {
+            'requestId': requestId,
+            'path': path,
+            'bytes': bytes,
+            'maxWidth': maxWidth,
+            'maxHeight': maxHeight,
+            'format': format,
+          });
+      cancellation?.throwIfCancelled();
+    } on PlatformException {
+      cancellation?.throwIfCancelled();
+      rethrow;
+    } finally {
+      completed = true;
+    }
     final width = result?['width'];
     final height = result?['height'];
     final outputBytes = result?['bytes'];

@@ -25,12 +25,12 @@ class DecodedImageLoader {
     LoadScheduler? scheduler,
     PhotoDecoder? decoder,
   }) : scheduler = scheduler ?? LoadScheduler(),
-       _decoder = decoder ?? decodePhoto;
+       _decoder = decoder;
 
   final Future<ImageBytesRepository> repository;
   final MemoryImageCache memoryCache;
   final LoadScheduler scheduler;
-  final PhotoDecoder _decoder;
+  final PhotoDecoder? _decoder;
   final Map<String, _SharedLoad> _inFlight = {};
   int _admissionEpoch = 0;
   int _activeDecodes = 0;
@@ -152,7 +152,13 @@ class DecodedImageLoader {
     _activeDecodes++;
     try {
       cancellation.throwIfCancelled();
-      final image = await _decoder(bytes, fullScreen: fullScreen);
+      final image =
+          await (_decoder?.call(bytes, fullScreen: fullScreen) ??
+              decodePhoto(
+                bytes,
+                fullScreen: fullScreen,
+                cancellation: cancellation,
+              ));
       if (cancellation.isCancelled) {
         image.dispose();
         throw LoadCancelled();
@@ -206,7 +212,9 @@ Future<ui.Image> decodePhoto(
   Uint8List bytes, {
   required bool fullScreen,
   NativeImageBridge? nativeBridge,
+  LoadCancellation? cancellation,
 }) async {
+  cancellation?.throwIfCancelled();
   final sourceBytes =
       !fullScreen &&
               (nativeBridge != null || Platform.isAndroid || Platform.isIOS)
@@ -215,15 +223,22 @@ Future<ui.Image> decodePhoto(
             maxWidth: 400,
             maxHeight: 400,
             format: 'jpeg',
+            cancellation: cancellation,
           )).bytes
           : bytes;
+  cancellation?.throwIfCancelled();
   final codec = await ui.instantiateImageCodec(
     sourceBytes,
     targetWidth: fullScreen ? null : 400,
     allowUpscaling: false,
   );
   try {
+    cancellation?.throwIfCancelled();
     final frame = await codec.getNextFrame();
+    if (cancellation?.isCancelled ?? false) {
+      frame.image.dispose();
+      throw LoadCancelled();
+    }
     return frame.image;
   } finally {
     codec.dispose();

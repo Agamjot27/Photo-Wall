@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_wall/core/images/decoded_image_loader.dart';
+import 'package:photo_wall/core/images/load_scheduler.dart';
 import 'package:photo_wall/core/images/native_image_bridge.dart';
 
 void main() {
@@ -70,6 +72,42 @@ void main() {
     expect(info.thresholdBytes, 100);
     expect(info.lowMemory, isFalse);
   });
+
+  test(
+    'abandoned thumbnail cancels native work before Flutter decode',
+    () async {
+      final started = Completer<int>();
+      final cancelled = Completer<int>();
+      final nativeReply = Completer<Object?>();
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        final args = call.arguments as Map<Object?, Object?>;
+        final requestId = args['requestId'] as int;
+        if (call.method == 'decodeDownsampled') {
+          started.complete(requestId);
+          return nativeReply.future;
+        }
+        expect(call.method, 'cancelDecode');
+        cancelled.complete(requestId);
+        return null;
+      });
+      final cancellation = LoadCancellation();
+      final thumbnail = decodePhoto(
+        Uint8List.fromList([1]),
+        fullScreen: false,
+        nativeBridge: NativeImageBridge(channel: channel),
+        cancellation: cancellation,
+      );
+      final requestId = await started.future;
+      cancellation.cancel();
+      expect(await cancelled.future, requestId);
+      nativeReply.complete({
+        'width': 1,
+        'height': 1,
+        'bytes': Uint8List.fromList([1]),
+      });
+      await expectLater(thumbnail, throwsA(isA<LoadCancelled>()));
+    },
+  );
 
   test(
     'path input and invalid dimensions follow the channel contract',
