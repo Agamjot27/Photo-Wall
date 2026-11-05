@@ -133,6 +133,10 @@ available, total, threshold, and low-memory values for the detailed panel.
 - The CI APK uses debug signing for this assignment. An Android install with a
   different signing key cannot replace it without uninstalling the old build,
   which clears that app's local cache and data.
+- Android uses Skia because Flutter 3.29.2's Impeller GLES renderer aborted on
+  the API 35 emulator after fast scrolling and opening photos. The crash matches
+  a [reported Flutter engine issue](https://github.com/flutter/flutter/issues/168682);
+  disabling Impeller is the documented Android workaround.
 
 ## 8. Validation and remaining limitations
 
