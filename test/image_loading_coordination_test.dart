@@ -21,8 +21,63 @@ ui.Image tinyImage() {
   return image;
 }
 
+class AbortableRepository extends ImageBytesRepository {
+  AbortableRepository(super.cache, this.started);
+
+  final Completer<void> started;
+
+  @override
+  Future<(Uint8List, bool)> load(
+    String url, {
+    bool admitToDisk = true,
+    LoadCancellation? cancellation,
+  }) async {
+    if (url == photoCatalog.first.thumbnailUrl) {
+      started.complete();
+      await cancellation!.whenCancelled;
+      throw LoadCancelled();
+    }
+    return (Uint8List.fromList([1]), false);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('abandoned active thumbnail gives the viewer its slot', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'photo-wall-active-cancel-',
+    );
+    final memory = MemoryImageCache(maxBytes: 1024);
+    try {
+      final started = Completer<void>();
+      final source = AbortableRepository(DiskImageCache(directory), started);
+      final scheduler = LoadScheduler(maxActive: 1);
+      final loader = DecodedImageLoader(
+        repository: Future.value(source),
+        memoryCache: memory,
+        scheduler: scheduler,
+        decoder: (bytes, {required fullScreen}) async => tinyImage(),
+      );
+      final stale = loader.request(photoCatalog.first, fullScreen: false);
+      final cancelled = expectLater(
+        stale.future,
+        throwsA(isA<LoadCancelled>()),
+      );
+      await started.future;
+      final viewer = loader.request(photoCatalog[1], fullScreen: true);
+      expect(scheduler.queuedCount, 1);
+      stale.cancel();
+      await cancelled;
+      final image = await viewer.future;
+      expect(image.width, 1);
+      image.dispose();
+      expect(scheduler.activeCount, 0);
+    } finally {
+      memory.clear();
+      await directory.delete(recursive: true);
+    }
+  });
 
   test(
     'replacing a cancelled queued request does not lose the new job',

@@ -5,8 +5,41 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_wall/core/images/disk_image_cache.dart';
 import 'package:photo_wall/core/images/image_bytes_repository.dart';
+import 'package:photo_wall/core/images/load_scheduler.dart';
 
 void main() {
+  test(
+    'cancelling an active HTTP request releases its download slot',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'photo-wall-cancel-test-',
+      );
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final started = Completer<void>();
+      server.listen((request) => started.complete());
+      try {
+        final disk = DiskImageCache(directory);
+        await disk.initialize();
+        final source = ImageBytesRepository(disk);
+        final cancellation = LoadCancellation();
+        final request = source.download(
+          'http://127.0.0.1:${server.port}/photo',
+          cancellation: cancellation,
+        );
+        final cancelled = expectLater(request, throwsA(isA<LoadCancelled>()));
+        await started.future;
+        expect(source.activeDownloads, 1);
+        cancellation.cancel();
+        await cancelled;
+        expect(source.activeDownloads, 0);
+        expect(disk.sizeBytes, 0);
+      } finally {
+        await server.close(force: true);
+        await directory.delete(recursive: true);
+      }
+    },
+  );
+
   test('a stalled image response ends with a timeout', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen((request) {

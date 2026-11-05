@@ -3,6 +3,21 @@ import 'dart:collection';
 
 class LoadCancelled implements Exception {}
 
+class LoadCancellation {
+  final Completer<void> _cancelled = Completer<void>();
+
+  bool get isCancelled => _cancelled.isCompleted;
+  Future<void> get whenCancelled => _cancelled.future;
+
+  void cancel() {
+    if (!isCancelled) _cancelled.complete();
+  }
+
+  void throwIfCancelled() {
+    if (isCancelled) throw LoadCancelled();
+  }
+}
+
 class ScheduledJob<T> {
   ScheduledJob(this.future, this.cancel, this.isStarted);
   final Future<T> future;

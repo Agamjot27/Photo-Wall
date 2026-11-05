@@ -7,53 +7,71 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import 'disk_image_cache.dart';
+import 'load_scheduler.dart';
 
 typedef ImageFetcher = Future<Uint8List> Function(Uri url);
 
 class ImageBytesRepository {
   ImageBytesRepository(this.cache, {ImageFetcher? fetch})
-    : _fetch = fetch ?? fetchImageBytes;
+    : _fetchOverride = fetch;
 
   final DiskImageCache cache;
-  final ImageFetcher _fetch;
+  final ImageFetcher? _fetchOverride;
   int _activeDownloads = 0;
   int _cacheGeneration = 0;
   Future<void>? _clearPending;
 
   int get activeDownloads => _activeDownloads;
 
-  Future<(Uint8List, bool)> load(String url, {bool admitToDisk = true}) async {
+  Future<(Uint8List, bool)> load(
+    String url, {
+    bool admitToDisk = true,
+    LoadCancellation? cancellation,
+  }) async {
+    cancellation?.throwIfCancelled();
     final generation = _cacheGeneration;
     await _clearPending;
     final cached = await cache.read(url);
+    cancellation?.throwIfCancelled();
     if (cached != null) return (cached, true);
     return (
       await _download(
         url,
         admitToDisk: admitToDisk,
         expectedGeneration: generation,
+        cancellation: cancellation,
       ),
       false,
     );
   }
 
-  Future<Uint8List> download(String url, {bool admitToDisk = true}) =>
-      _download(url, admitToDisk: admitToDisk);
+  Future<Uint8List> download(
+    String url, {
+    bool admitToDisk = true,
+    LoadCancellation? cancellation,
+  }) => _download(url, admitToDisk: admitToDisk, cancellation: cancellation);
 
   Future<Uint8List> _download(
     String url, {
     required bool admitToDisk,
     int? expectedGeneration,
+    LoadCancellation? cancellation,
   }) async {
+    cancellation?.throwIfCancelled();
     final generation = expectedGeneration ?? _cacheGeneration;
     await _clearPending;
+    cancellation?.throwIfCancelled();
     _activeDownloads++;
     late final Uint8List bytes;
     try {
-      bytes = await _fetch(Uri.parse(url));
+      final uri = Uri.parse(url);
+      bytes =
+          await (_fetchOverride?.call(uri) ??
+              fetchImageBytes(uri, cancellation: cancellation));
     } finally {
       _activeDownloads--;
     }
+    cancellation?.throwIfCancelled();
     if (admitToDisk && generation == _cacheGeneration) {
       try {
         await cache.write(url, bytes);
@@ -81,10 +99,12 @@ class ImageBytesRepository {
 Future<Uint8List> fetchImageBytes(
   Uri url, {
   Duration timeout = const Duration(seconds: 30),
+  LoadCancellation? cancellation,
 }) async {
+  cancellation?.throwIfCancelled();
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
   try {
-    return await (() async {
+    final fetch = (() async {
       final request = await client.getUrl(url);
       final response = await request.close();
       if (response.statusCode != HttpStatus.ok) {
@@ -106,6 +126,14 @@ Future<Uint8List> fetchImageBytes(
       }
       return builder.takeBytes();
     })().timeout(timeout);
+    if (cancellation == null) return await fetch;
+    return await Future.any<Uint8List>([
+      fetch,
+      cancellation.whenCancelled.then((_) {
+        client.close(force: true);
+        throw LoadCancelled();
+      }),
+    ]);
   } finally {
     client.close(force: true);
   }

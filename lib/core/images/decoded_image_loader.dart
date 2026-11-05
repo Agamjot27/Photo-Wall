@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -6,6 +7,7 @@ import '../../features/photos/models/photo.dart';
 import 'image_bytes_repository.dart';
 import 'load_scheduler.dart';
 import 'memory_image_cache.dart';
+import 'native_image_bridge.dart';
 
 typedef PhotoDecoder =
     Future<ui.Image> Function(Uint8List bytes, {required bool fullScreen});
@@ -63,18 +65,23 @@ class DecodedImageLoader {
     var shared = _inFlight[key];
     if (shared == null) {
       final admissionEpoch = _admissionEpoch;
+      final cancellation = LoadCancellation();
       final job = scheduler.schedule(
         () => _execute(
           url,
           key,
           fullScreen: fullScreen,
           admissionEpoch: admissionEpoch,
+          cancellation: cancellation,
         ),
         urgent: fullScreen,
       );
-      shared = _SharedLoad(job, () => _inFlight.remove(key));
+      late final _SharedLoad current;
+      current = _SharedLoad(job, cancellation, () {
+        if (identical(_inFlight[key], current)) _inFlight.remove(key);
+      });
+      shared = current;
       _inFlight[key] = shared;
-      final current = shared;
       unawaited(
         job.future.then(
           (image) {
@@ -96,28 +103,40 @@ class DecodedImageLoader {
     String key, {
     required bool fullScreen,
     required int admissionEpoch,
+    required LoadCancellation cancellation,
   }) async {
+    cancellation.throwIfCancelled();
     if (!fullScreen) {
       final cached = memoryCache.get(key);
       if (cached != null) return cached;
     }
     final source = await repository;
+    cancellation.throwIfCancelled();
     final (bytes, fromDisk) = await source.load(
       url,
       admitToDisk: admissionEpoch == _admissionEpoch,
+      cancellation: cancellation,
     );
+    cancellation.throwIfCancelled();
     ui.Image image;
     try {
-      image = await _decode(bytes, fullScreen: fullScreen);
-    } catch (_) {
-      if (!fromDisk) rethrow;
+      image = await _decode(
+        bytes,
+        fullScreen: fullScreen,
+        cancellation: cancellation,
+      );
+    } catch (error) {
+      if (error is LoadCancelled || !fromDisk) rethrow;
+      cancellation.throwIfCancelled();
       await source.invalidate(url);
       image = await _decode(
         await source.download(
           url,
           admitToDisk: admissionEpoch == _admissionEpoch,
+          cancellation: cancellation,
         ),
         fullScreen: fullScreen,
+        cancellation: cancellation,
       );
     }
     if (fullScreen) return image;
@@ -125,10 +144,20 @@ class DecodedImageLoader {
     return memoryCache.admit(key, image);
   }
 
-  Future<ui.Image> _decode(Uint8List bytes, {required bool fullScreen}) async {
+  Future<ui.Image> _decode(
+    Uint8List bytes, {
+    required bool fullScreen,
+    required LoadCancellation cancellation,
+  }) async {
     _activeDecodes++;
     try {
-      return await _decoder(bytes, fullScreen: fullScreen);
+      cancellation.throwIfCancelled();
+      final image = await _decoder(bytes, fullScreen: fullScreen);
+      if (cancellation.isCancelled) {
+        image.dispose();
+        throw LoadCancelled();
+      }
+      return image;
     } finally {
       _activeDecodes--;
     }
@@ -136,10 +165,11 @@ class DecodedImageLoader {
 }
 
 class _SharedLoad {
-  _SharedLoad(this.job, this.onCancelledQueued);
+  _SharedLoad(this.job, this.cancellation, this.onLastSubscriberCancelled);
 
   final ScheduledJob<ui.Image> job;
-  final void Function() onCancelledQueued;
+  final LoadCancellation cancellation;
+  final void Function() onLastSubscriberCancelled;
   final Set<Completer<ui.Image>> _subscribers = {};
 
   ImageLoadRequest subscribe() {
@@ -148,8 +178,9 @@ class _SharedLoad {
     return ImageLoadRequest(subscriber.future, () {
       if (!_subscribers.remove(subscriber)) return;
       subscriber.completeError(LoadCancelled());
-      if (_subscribers.isEmpty && !job.isStarted()) {
-        onCancelledQueued();
+      if (_subscribers.isEmpty) {
+        onLastSubscriberCancelled();
+        cancellation.cancel();
         job.cancel();
       }
     });
@@ -174,9 +205,19 @@ class _SharedLoad {
 Future<ui.Image> decodePhoto(
   Uint8List bytes, {
   required bool fullScreen,
+  NativeImageBridge? nativeBridge,
 }) async {
+  final sourceBytes =
+      !fullScreen && (nativeBridge != null || Platform.isAndroid)
+          ? (await (nativeBridge ?? NativeImageBridge()).decodeDownsampled(
+            bytes: bytes,
+            maxWidth: 400,
+            maxHeight: 400,
+            format: 'jpeg',
+          )).bytes
+          : bytes;
   final codec = await ui.instantiateImageCodec(
-    bytes,
+    sourceBytes,
     targetWidth: fullScreen ? null : 400,
     allowUpscaling: false,
   );

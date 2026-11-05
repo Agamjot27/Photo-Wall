@@ -9,6 +9,7 @@ import 'package:forui/forui.dart';
 import 'package:photo_wall/core/images/decoded_image_loader.dart';
 import 'package:photo_wall/core/images/disk_image_cache.dart';
 import 'package:photo_wall/core/images/image_bytes_repository.dart';
+import 'package:photo_wall/core/images/load_scheduler.dart';
 import 'package:photo_wall/core/images/memory_image_cache.dart';
 import 'package:photo_wall/features/photos/models/photo_catalog.dart';
 import 'package:photo_wall/features/photos/widgets/decoded_photo_image.dart';
@@ -24,6 +25,48 @@ ui.Image makeImage() {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('cancelled decode disposes its late image', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'photo-wall-decode-cancel-',
+    );
+    final memory = MemoryImageCache(maxBytes: 1024);
+    try {
+      final disk = DiskImageCache(directory);
+      await disk.initialize();
+      final source = ImageBytesRepository(
+        disk,
+        fetch: (_) async => Uint8List.fromList([1]),
+      );
+      final started = Completer<void>();
+      final finish = Completer<ui.Image>();
+      final loader = DecodedImageLoader(
+        repository: Future.value(source),
+        memoryCache: memory,
+        decoder: (bytes, {required fullScreen}) {
+          started.complete();
+          return finish.future;
+        },
+      );
+      final request = loader.request(photoCatalog.first, fullScreen: false);
+      final cancelled = expectLater(
+        request.future,
+        throwsA(isA<LoadCancelled>()),
+      );
+      await started.future;
+      final lateImage = makeImage();
+      request.cancel();
+      finish.complete(lateImage);
+      await cancelled;
+      await Future<void>.delayed(Duration.zero);
+      expect(lateImage.debugDisposed, isTrue);
+      expect(memory.sizeBytes, 0);
+      expect(loader.scheduler.activeCount, 0);
+    } finally {
+      memory.clear();
+      await directory.delete(recursive: true);
+    }
+  });
   testWidgets('failed decoded photo shows Retry and can recover', (
     tester,
   ) async {
