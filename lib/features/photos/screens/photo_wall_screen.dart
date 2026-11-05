@@ -71,11 +71,11 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
           children: [
             GridView.builder(
               key: const PageStorageKey<String>('photo-grid'),
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
               ),
               itemCount: widget.photos.length,
               itemBuilder: (context, index) {
@@ -86,7 +86,7 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
                   label: 'Open ${photo.semanticLabel.toLowerCase()}',
                   child: Material(
                     color: context.theme.colors.muted,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
                       onTap:
