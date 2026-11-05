@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:forui/forui.dart';
 
 import '../../../app/circle_theme.dart';
@@ -30,9 +31,39 @@ class PhotoWallScreen extends StatefulWidget {
 class _PhotoWallScreenState extends State<PhotoWallScreen> {
   final ScrollController _gridController = ScrollController();
   bool _showDiagnostics = false;
+  bool _isScrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _gridController.addListener(_updateHeader);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _gridController.hasClients) _updateHeader();
+    });
+  }
+
+  void _updateHeader() {
+    final isScrolled = _gridController.offset > 4;
+    if (isScrolled != _isScrolled) {
+      setState(() => _isScrolled = isScrolled);
+    }
+  }
 
   void _scrollToTop() {
-    if (_gridController.hasClients) _gridController.jumpTo(0);
+    if (!_gridController.hasClients) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _gridController.jumpTo(0);
+      return;
+    }
+    final distance = _gridController.offset;
+    final milliseconds = (240 + distance / 10).round().clamp(260, 650);
+    unawaited(
+      _gridController.animateTo(
+        0,
+        duration: Duration(milliseconds: milliseconds),
+        curve: Curves.easeOutCubic,
+      ),
+    );
   }
 
   void _openPhoto(Photo photo) {
@@ -88,86 +119,149 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final headerHeight = MediaQuery.paddingOf(context).top + 56;
     return FScaffold(
       childPad: false,
-      header: CircleDarkHeader(
-        child: FHeader(
-          title: const Text('Photo Wall'),
-          suffixes: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: CirclePalette.lime,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${widget.photos.length} photos',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: CirclePalette.ink,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+      child: Stack(
+        children: [
+          GridView.builder(
+            key: const PageStorageKey<String>('photo-grid'),
+            controller: _gridController,
+            padding: EdgeInsets.fromLTRB(
+              14,
+              headerHeight + 4,
+              14,
+              MediaQuery.paddingOf(context).bottom + 88,
             ),
-          ],
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Stack(
-          children: [
-            GridView.builder(
-              key: const PageStorageKey<String>('photo-grid'),
-              controller: _gridController,
-              padding: const EdgeInsets.fromLTRB(14, 2, 14, 88),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: widget.photos.length,
+            itemBuilder: (context, index) {
+              final photo = widget.photos[index];
+              return Semantics(
+                key: ValueKey<String>(photo.id),
+                button: true,
+                label: 'Open ${photo.semanticLabel.toLowerCase()}',
+                child: Material(
+                  color: context.theme.colors.muted,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => _openPhoto(photo),
+                    child: DecodedPhotoImage(
+                      photo: photo,
+                      loader: widget.loader.load,
+                      requestFactory: widget.loader.request,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.transparent,
               ),
-              itemCount: widget.photos.length,
-              itemBuilder: (context, index) {
-                final photo = widget.photos[index];
-                return Semantics(
-                  key: ValueKey<String>(photo.id),
-                  button: true,
-                  label: 'Open ${photo.semanticLabel.toLowerCase()}',
-                  child: Material(
-                    color: context.theme.colors.muted,
-                    borderRadius: BorderRadius.circular(12),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => _openPhoto(photo),
-                      child: DecodedPhotoImage(
-                        photo: photo,
-                        loader: widget.loader.load,
-                        requestFactory: widget.loader.request,
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: AnimatedContainer(
+                    key: const ValueKey('gallery-header'),
+                    duration: const Duration(milliseconds: 180),
+                    height: headerHeight,
+                    color: const Color(
+                      0xFF1E2B37,
+                    ).withValues(alpha: _isScrolled ? 0.28 : 0.90),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: CirclePalette.ink.withValues(
+                                      alpha: 0.82,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    child: Text(
+                                      'Photo Wall',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleLarge?.copyWith(
+                                        color: CirclePalette.lime,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 23,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: CirclePalette.lime,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${widget.photos.length} photos',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.labelSmall?.copyWith(
+                                  color: CirclePalette.ink,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-            if (_showDiagnostics)
-              Positioned(
-                left: 12,
-                bottom: 84,
-                child: CacheDebugOverlay(
-                  loader: widget.loader,
-                  onOpenDetails: _openDiagnostics,
                 ),
               ),
+            ),
+          ),
+          if (_showDiagnostics)
             Positioned(
-              right: 14,
-              bottom: 14,
-              child: _GalleryDock(
-                showingCache: _showDiagnostics,
-                onScrollToTop: _scrollToTop,
-                onToggleCache:
-                    () => setState(() => _showDiagnostics = !_showDiagnostics),
+              left: 12,
+              bottom: MediaQuery.paddingOf(context).bottom + 84,
+              child: CacheDebugOverlay(
+                loader: widget.loader,
+                onOpenDetails: _openDiagnostics,
               ),
             ),
-          ],
-        ),
+          Positioned(
+            right: 14,
+            bottom: MediaQuery.paddingOf(context).bottom + 14,
+            child: _GalleryDock(
+              showingCache: _showDiagnostics,
+              onScrollToTop: _scrollToTop,
+              onToggleCache:
+                  () => setState(() => _showDiagnostics = !_showDiagnostics),
+            ),
+          ),
+        ],
       ),
     );
   }

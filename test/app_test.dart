@@ -21,6 +21,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(FScaffold), findsOneWidget);
     expect(find.text('100 photos'), findsOneWidget);
+    expect(
+      tester.getRect(find.byKey(const ValueKey('gallery-header'))),
+      const Rect.fromLTWH(0, 0, 320, 56),
+    );
+    final header = tester.widget<AnimatedContainer>(
+      find.byKey(const ValueKey('gallery-header')),
+    );
+    expect((header.decoration! as BoxDecoration).color!.a, closeTo(0.90, 0.01));
     expect(tester.takeException(), isNull);
   });
 
@@ -52,8 +60,13 @@ void main() {
     expect(position.pixels, greaterThan(0));
     expect(position.pixels, lessThan(80));
 
+    final start = position.pixels;
     await tester.tap(find.byKey(const ValueKey('scroll-to-top-action')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(position.pixels, greaterThan(0));
+    expect(position.pixels, lessThan(start));
+    await tester.pump(const Duration(milliseconds: 400));
     expect(position.pixels, 0);
   });
 
@@ -74,13 +87,19 @@ void main() {
     await tester.drag(find.byType(GridView), const Offset(0, -900));
     await tester.pump();
     expect(find.byKey(const ValueKey('cache-debug-panel')), findsOneWidget);
+    final header = tester.widget<AnimatedContainer>(
+      find.byKey(const ValueKey('gallery-header')),
+    );
+    final headerColor = (header.decoration! as BoxDecoration).color!;
+    expect(headerColor.a, lessThan(0.4));
+    expect(headerColor.r, greaterThan(0.1));
     final topAction = tester.widget<TextButton>(
       find.byKey(const ValueKey('scroll-to-top-action')),
     );
     expect(topAction.onPressed, isNotNull);
     await tester.tap(find.byKey(const ValueKey('scroll-to-top-action')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 700));
     expect(
       tester.state<ScrollableState>(find.byType(Scrollable)).position.pixels,
       closeTo(0, 1),
