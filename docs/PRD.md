@@ -83,7 +83,7 @@ that a separate full-screen network variant is available offline.
 | O02 | Decode cancellation | In-flight decode cannot be interrupted; cancelled results are disposed safely. |
 | O03 | Manual cache clear | Clear cached content safely during active work. Implemented in Phase 7; optional in the assignment. |
 | O04 | Android native integration | Dart bridge and Kotlin methods are written; compilation, device testing, and profiling remain pending. |
-| O05 | iOS integration | Additional bonus only; not currently scheduled. |
+| O05 | iOS integration | Optional iOS host and thumbnail channel written in Phase 10; macOS compilation and device testing pending. |
 
 Optional features cannot displace mandatory correctness or submission work.
 
@@ -105,7 +105,8 @@ requests, concurrency limits, and widget navigation/error behavior. Android
 manual checks cover cold/warm loading, offline revisits, rapid scrolling, repeated
 viewer navigation, pressure handling, and diagnostic accuracy.
 
-Each phase has two or three cohesive commits. Phase 1 has two commits:
+Phases normally have two or three cohesive commits; Phase 10 is a single
+combined commit at the owner's request. Phase 1 has two commits:
 the app foundation and documentation, including the PRD/TRD baseline.
 The complete phase mapping and test coverage are in the TRD.
 
@@ -129,11 +130,14 @@ and queued cancellation. Phase 6 adds memory-pressure trimming and viewer image
 lifecycle checks. Phase 7 adds live diagnostics, safe manual clearing, a bounded
 network request, and explicit Retry state. Phase 8 acceptance tests cover the
 cold, memory-hit, disk-hit, offline-restart, and corrupt-disk paths. Native work
-remains optional. Android performance checks and a verified release APK remain
-pending; the agent-session Gradle client fails to connect to its local daemon.
+remains optional. Physical-device performance checks remain unavailable; the
+agent-session Gradle client fails to connect to its local daemon.
 
 Phase 9 work adds active HTTP cancellation and Android native downsampling and
 memory information. The Dart channel contract tests pass. The first Phase 8
-cloud APK build succeeded, but it predates Phase 9 and has not been installed
-or smoke-tested. The native Android code still needs cloud compilation and device
-verification.
+cloud APK build succeeded, but it predates Phase 9. The Phase 9 cloud APK also
+built successfully and the owner smoke-tested it on an Android Studio emulator,
+including cached-photo reopening offline.
+
+Phase 10 adds an iOS host and ImageIO thumbnail channel. It remains unverified
+because the current development machine is Windows.

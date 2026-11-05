@@ -16,8 +16,8 @@ disk before network and retains files across restarts. Phase 4 adds a custom
 jobs to three and shares identical requests.
 Phase 6 trims decoded images on system memory pressure. Phase 7 adds a live
 diagnostics screen and manual cache clearing.
-Phase 9 work adds active HTTP cancellation and optional Android native
-thumbnail downsampling and memory information.
+Phase 9 adds active HTTP cancellation and Android native thumbnail downsampling
+and memory information. Phase 10 adds an optional iOS thumbnail channel.
 Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, and
 loading indicator. Failed images use a labeled Material Retry button. The grid
 remains a lazy Flutter GridView.
@@ -37,7 +37,8 @@ above records what exists today.
 
 The initial scaffold was generated and checked with Flutter 3.29.2 stable,
 Dart 3.7.2, and Android Studio's Java 17. The Android application ID is
-com.assignment.photo_wall. Only Android is configured.
+com.assignment.photo_wall. Android and iOS host projects are configured; the iOS
+host and Swift code still require a macOS build.
 
 1. Install Flutter and Android Studio with the Android SDK, build tools,
    platform tools, and Android SDK Command-line Tools.
@@ -51,6 +52,10 @@ flutter pub get
 flutter devices
 flutter run -d <android-device-id>
 ~~~
+
+For the optional iOS host, use macOS with Xcode and CocoaPods, then run
+`flutter pub get` and `flutter run -d <ios-device-id>`. The Android APK remains
+the required submission artifact.
 
 ## Quality checks
 
@@ -110,7 +115,8 @@ test/
 
 UI remains in features/photos. Loading, decoding, and both caches live in
 core/images, including the Phase 5 scheduler. Android native methods live in
-android/app/src/main/kotlin/com/assignment/photo_wall.
+android/app/src/main/kotlin/com/assignment/photo_wall; the iOS channel is in
+ios/Runner/AppDelegate.swift.
 
 ## Photo source and current behavior
 
@@ -226,8 +232,11 @@ ActivityManager's approximate available, total, threshold, and low-memory data.
 The channel input/output is validated on the Dart side and covered by mock-channel
 tests. Re-encoding introduces extra CPU and a temporary byte copy; it needs
 Android profile testing before claiming a performance gain. The native Kotlin
-code has not yet been compiled in the cloud or smoke-tested on a device.
-iOS native integration remains unimplemented.
+code compiled in the Phase 9 cloud release workflow and was exercised on an
+Android Studio emulator by the owner.
+The iOS host uses ImageIO thumbnail sampling and returns the same compressed
+image response. It does not expose Android ActivityManager memory information.
+The iOS path has not yet been compiled or tested on a Mac or iOS device.
 
 ## Android build and validation status
 
@@ -260,16 +269,24 @@ Validation status:
   recovery using the production decoder.
 - Phase 9 tests cover active HTTP cancellation, scheduler slot recovery,
   cancelled decode disposal, and the native MethodChannel response contract.
+- Phase 10 adds an iOS host and ImageIO thumbnail channel. A macOS simulator
+  workflow will check compilation after publication; no iOS runtime result is
+  available yet.
 - An Android 15 emulator is now detected as emulator-5556.
 - The [first cloud release workflow](https://github.com/Agamjot27/Photo-Wall/actions/runs/41975602529)
   completed successfully and uploaded
   an APK artifact. That build predates the Phase 9 native code and has not been
   installed or smoke-tested here.
+- The [Phase 9 release workflow](https://github.com/Agamjot27/Photo-Wall/actions/runs/41979856858)
+  passed and uploaded an APK. The owner installed it on an Android Studio
+  emulator and confirmed gallery/viewer navigation, diagnostics, cache clearing,
+  and reopening a cached photo offline.
 - The agent-session release build fails before Android compilation because the
   Gradle client cannot open its local daemon socket (`PipeImpl`,
   `Invalid argument: connect`). This is separate from the owner's successful
   local launch and does not establish whether the release APK builds locally.
-- Phase 2 on-device interaction and performance verification remain pending.
+- Emulator interaction checks passed; physical-device performance verification
+  remains unavailable.
 
 To verify Phase 2 locally, restart the running app (or run flutter run), scroll
 through the gallery, open a photo, try both back controls, and confirm the scroll
@@ -282,7 +299,7 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 9 checkpoint, not a complete submission. The native Android
-bonus needs a cloud build and device smoke test; final APK and profile-mode
-acceptance checks remain outstanding. The custom memory budget does not cap
-temporary or total process memory.
+This is a Phase 10 checkpoint, not a complete submission. The Phase 9 Android
+APK built and passed owner smoke checks on an emulator; the iOS bonus needs a
+macOS build. Physical-device performance profiling remains outstanding. The
+custom memory budget does not cap temporary or total process memory.

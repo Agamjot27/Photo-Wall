@@ -38,6 +38,10 @@ Install and smoke-test that artifact before attaching it to a release.
       continually retained viewer images or repeated frame-budget overruns.
 - [ ] Install and launch the final release APK on Android.
 
+The optional iOS host is checked separately by the macOS simulator build
+workflow. An iOS simulator or device smoke test is still required before claiming
+iOS support as verified.
+
 ## Evidence so far
 
 - Automated formatting, analysis, and 40 tests pass on 2026-11-05.
@@ -45,6 +49,10 @@ Install and smoke-test that artifact before attaching it to a release.
 - The Phase 8 baseline GitHub workflow succeeded and uploaded an APK artifact,
   but that artifact has not been installed or smoke-tested. It predates the
   native Android bonus.
+- The Phase 9 release workflow passed. The owner installed its APK on an Android
+  Studio emulator and confirmed gallery/viewer navigation, diagnostics, cache
+  clearing, and reopening a cached photo after an offline app restart.
 - The agent-session release build fails before Android compilation when Gradle
   attempts to connect its local daemon (`PipeImpl`, `Invalid argument: connect`).
-  A release APK and profile-mode observations are therefore still pending.
+  Local release compilation remains blocked, but the cloud APK built and ran on
+  the emulator. Physical-device profile observations remain unavailable.

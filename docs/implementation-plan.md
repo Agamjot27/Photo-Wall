@@ -1,6 +1,7 @@
 # Implementation plan
 
-Each phase targets two or three cohesive commits. Relevant tests and documentation
+Each phase normally targets two or three cohesive commits; the owner requested
+one combined commit for Phase 10. Relevant tests and documentation
 travel with the behavior they describe. Validate and review each staged diff before
 committing. Do not commit generated builds, local SDK paths, or signing secrets.
 
@@ -138,6 +139,15 @@ Only start after the required app is stable.
 In progress: active HTTP requests close when their final subscriber leaves;
 late decoded images are discarded. The Android channel implementation and Dart
 bridge are written, and thumbnails use native downsampling on Android. Dart tests
-pass, but Kotlin compilation and on-device profiling are pending until a build
-containing this code runs. The Phase 8 cloud build succeeded before Phase 9 and
-produced an APK artifact; it has not yet been smoke-tested.
+pass. The Phase 9 cloud APK compiled and the owner smoke-tested it on an Android
+Studio emulator, including cached-photo reopening offline. Physical-device
+performance profiling remains unavailable.
+
+## Optional phase 10 - iOS thumbnail bonus
+
+1. phase-10: add iOS host, native thumbnail channel, macOS build check, and docs
+
+The generated iOS host calls ImageIO from a background queue to sample grid
+thumbnails. It returns compressed bytes through the existing channel contract.
+Android-only ActivityManager memory data is not provided on iOS. The Swift code
+needs a macOS compile and iOS simulator or device smoke test.

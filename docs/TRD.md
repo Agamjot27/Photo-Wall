@@ -302,7 +302,7 @@ iOS is not required for this bonus.
 | P13-P15 | 1 and 8 | Analyzer and code review, complete README, release APK build and device smoke test. |
 | O01-O02 | 5 if implemented | Shared-subscriber cancellation tests and unneeded-result disposal. |
 | O04 | 9 if implemented | MethodChannel contract tests and Android native integration tests. |
-| O05 | Not scheduled | No iOS completion claim. |
+| O05 | 10 | iOS host and ImageIO thumbnail channel; macOS compilation and iOS smoke test pending. |
 
 Use fake network/clock/decoder dependencies for repeatable unit tests, real tiny
 fixtures for codec tests, and temporary directories for persistence tests. Avoid
@@ -317,7 +317,8 @@ substitute for profile-mode performance evaluation.
 
 ## Delivery and current risks
 
-Keep two or three commits per implementation phase and update docs with actual
+Normally keep two or three commits per implementation phase; Phase 10 is a
+single combined commit at the owner's request. Update docs with actual
 decisions as implementation evolves. Phase 1 has two commits: the app foundation
 and documentation, including the PRD/TRD baseline.
 
@@ -357,14 +358,19 @@ failed requests. Phase 8 acceptance tests now cover cache priority across a
 process-style restart and recovery from corrupt disk bytes with a real decoder.
 
 An Android emulator is detected. Debug grid and viewer interaction was observed,
-but profile-mode performance verification and the final release APK remain
-pending. The agent-session Gradle client fails before compilation when opening
+but physical-device performance verification remains unavailable. The
+agent-session Gradle client fails before compilation when opening
 its local daemon connection (`PipeImpl` / `Invalid argument: connect`).
 
 The first Phase 8 cloud APK workflow succeeded and uploaded an artifact. That
 build predates Phase 9 and has not been installed or smoke-tested. Phase 9 adds
 Android MethodChannel methods, Dart response validation, and native downsampling
-for thumbnails; Kotlin compilation and Android profiling remain pending.
+for thumbnails. The Phase 9 cloud APK compiled successfully, and the owner
+smoke-tested it on an emulator. Physical-device profiling remains unavailable.
+
+Phase 10 adds an iOS host and a Swift implementation of decodeDownsampled.
+The Android-only getMemoryInfo method remains unavailable on iOS. A macOS build
+and iOS device or simulator check are still needed.
 
 Before submission, complete the required phases, resolve Android verification,
 review release signing (currently the template's debug signing), and produce a

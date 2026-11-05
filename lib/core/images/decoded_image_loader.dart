@@ -208,7 +208,8 @@ Future<ui.Image> decodePhoto(
   NativeImageBridge? nativeBridge,
 }) async {
   final sourceBytes =
-      !fullScreen && (nativeBridge != null || Platform.isAndroid)
+      !fullScreen &&
+              (nativeBridge != null || Platform.isAndroid || Platform.isIOS)
           ? (await (nativeBridge ?? NativeImageBridge()).decodeDownsampled(
             bytes: bytes,
             maxWidth: 400,
