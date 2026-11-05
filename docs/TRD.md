@@ -300,9 +300,9 @@ iOS is not required for this bonus.
 | P08-P09 | 6 | Simulated pressure, no stale cache readmission, repeated viewer disposal tests, Android memory profiling. |
 | P04, O03 | 7 | Counter assertions under hit/miss/error/clear/eviction; clear-versus-download race tests. |
 | P13-P15 | 1 and 8 | Analyzer and code review, complete README, release APK build and device smoke test. |
-| O01-O02 | 5 if implemented | Shared-subscriber cancellation tests and unneeded-result disposal. |
+| O01-O02 | 5, 9, 11 | Shared-subscriber and active HTTP cancellation tests, native cancellation contract, and unneeded-result disposal. |
 | O04 | 9 if implemented | MethodChannel contract tests and Android native integration tests. |
-| O05 | 10 | iOS host and ImageIO thumbnail channel; macOS compilation and iOS smoke test pending. |
+| O05 | 10 | iOS host and ImageIO thumbnail channel compiled in macOS CI; iOS runtime smoke test pending. |
 
 Use fake network/clock/decoder dependencies for repeatable unit tests, real tiny
 fixtures for codec tests, and temporary directories for persistence tests. Avoid
@@ -369,8 +369,12 @@ for thumbnails. The Phase 9 cloud APK compiled successfully, and the owner
 smoke-tested it on an emulator. Physical-device profiling remains unavailable.
 
 Phase 10 adds an iOS host and a Swift implementation of decodeDownsampled.
-The Android-only getMemoryInfo method remains unavailable on iOS. A macOS build
-and iOS device or simulator check are still needed.
+The Android-only getMemoryInfo method remains unavailable on iOS. The macOS
+simulator build passed, while an iOS runtime check still needs a Mac and signing
+for a physical iPhone. Phase 11 adds a cancelDecode message and cooperative
+checks between native sampling, scaling, encoding, and Flutter decoding. Native
+codec calls already underway are not guaranteed to stop. CI compilation for
+Phase 11 remains pending.
 
 Before submission, complete the required phases, resolve Android verification,
 review release signing (currently the template's debug signing), and produce a

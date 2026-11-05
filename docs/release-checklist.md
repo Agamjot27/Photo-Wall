@@ -52,6 +52,8 @@ iOS support as verified.
 - The Phase 9 release workflow passed. The owner installed its APK on an Android
   Studio emulator and confirmed gallery/viewer navigation, diagnostics, cache
   clearing, and reopening a cached photo after an offline app restart.
+- The Phase 10 Android APK and iOS simulator builds passed. The owner has not
+  installed the Phase 10 APK, and iOS runtime testing remains open.
 - The agent-session release build fails before Android compilation when Gradle
   attempts to connect its local daemon (`PipeImpl`, `Invalid argument: connect`).
   Local release compilation remains blocked, but the cloud APK built and ran on

@@ -185,10 +185,12 @@ replacing another photo.
 
 When the last subscriber leaves an active network request, the HTTP client is
 closed and its scheduler slot is released after the request ends. A queued job
-is removed before starting. A decode already underway cannot be interrupted,
-but a cancelled result is disposed rather than displayed or cached. The
-scheduler does not prefetch. Different URL variants do not share their
-compressed source request.
+is removed before starting. Native thumbnail decodes receive a cancellation
+message and skip remaining stages when possible; Dart checks cancellation
+between native and Flutter decoding. A codec call already underway can finish,
+so its result is disposed rather than displayed or cached. The scheduler holds
+the slot until work actually finishes. It does not prefetch, and different URL
+variants do not share their compressed source request.
 
 ## Cache diagnostics and clearing
 
@@ -236,7 +238,10 @@ code compiled in the Phase 9 cloud release workflow and was exercised on an
 Android Studio emulator by the owner.
 The iOS host uses ImageIO thumbnail sampling and returns the same compressed
 image response. It does not expose Android ActivityManager memory information.
-The iOS path has not yet been compiled or tested on a Mac or iOS device.
+The Phase 10 iOS simulator build passed in macOS CI, but the app has not run on
+an iOS simulator or phone. Testing on an iPhone requires a Mac with Xcode and
+development signing; an unsigned simulator build cannot be installed from
+Windows onto a phone.
 
 ## Android build and validation status
 
@@ -269,9 +274,10 @@ Validation status:
   recovery using the production decoder.
 - Phase 9 tests cover active HTTP cancellation, scheduler slot recovery,
   cancelled decode disposal, and the native MethodChannel response contract.
-- Phase 10 adds an iOS host and ImageIO thumbnail channel. A macOS simulator
-  workflow will check compilation after publication; no iOS runtime result is
-  available yet.
+- Phase 10 adds an iOS host and ImageIO thumbnail channel. Its macOS simulator
+  build passed; no iOS runtime result is available yet.
+- Phase 11 adds cooperative cancellation between native and Flutter decode
+  stages. Native compilation of this change awaits the next CI run.
 - An Android 15 emulator is now detected as emulator-5556.
 - The [first cloud release workflow](https://github.com/Agamjot27/Photo-Wall/actions/runs/41975602529)
   completed successfully and uploaded
@@ -281,6 +287,9 @@ Validation status:
   passed and uploaded an APK. The owner installed it on an Android Studio
   emulator and confirmed gallery/viewer navigation, diagnostics, cache clearing,
   and reopening a cached photo offline.
+- The [Phase 10 Android workflow](https://github.com/Agamjot27/Photo-Wall/actions/runs/41992822705)
+  and [iOS simulator build](https://github.com/Agamjot27/Photo-Wall/actions/runs/41992822607)
+  passed. The Phase 10 APK has not been installed; the owner tested the Phase 9 APK.
 - The agent-session release build fails before Android compilation because the
   Gradle client cannot open its local daemon socket (`PipeImpl`,
   `Invalid argument: connect`). This is separate from the owner's successful
@@ -299,7 +308,8 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 10 checkpoint, not a complete submission. The Phase 9 Android
-APK built and passed owner smoke checks on an emulator; the iOS bonus needs a
-macOS build. Physical-device performance profiling remains outstanding. The
-custom memory budget does not cap temporary or total process memory.
+This is a Phase 11 coding checkpoint, not a complete submission. The Phase 9
+Android APK passed owner smoke checks on an emulator; Phase 11 native changes
+still need CI compilation. The final APK needs a smoke check and a durable
+release attachment. Physical-device performance profiling remains unavailable.
+The custom memory budget does not cap temporary or total process memory.

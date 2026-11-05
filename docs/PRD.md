@@ -80,10 +80,10 @@ that a separate full-screen network variant is available offline.
 | ID | Enhancement | Scope |
 | --- | --- | --- |
 | O01 | Request cancellation | Implemented for queued work and active HTTP requests after their final subscriber leaves. |
-| O02 | Decode cancellation | In-flight decode cannot be interrupted; cancelled results are disposed safely. |
+| O02 | Decode cancellation | Cooperative cancellation skips later native and Flutter decode stages; a codec call already underway may finish, and its result is disposed. |
 | O03 | Manual cache clear | Clear cached content safely during active work. Implemented in Phase 7; optional in the assignment. |
-| O04 | Android native integration | Dart bridge and Kotlin methods are written; compilation, device testing, and profiling remain pending. |
-| O05 | iOS integration | Optional iOS host and thumbnail channel written in Phase 10; macOS compilation and device testing pending. |
+| O04 | Android native integration | Kotlin compiled in CI; Phase 9 APK passed owner emulator smoke checks. Physical-device profiling remains unavailable. |
+| O05 | iOS integration | Optional iOS host and thumbnail channel compiled in macOS CI; runtime testing and signed phone installation remain pending. |
 
 Optional features cannot displace mandatory correctness or submission work.
 
@@ -139,5 +139,6 @@ cloud APK build succeeded, but it predates Phase 9. The Phase 9 cloud APK also
 built successfully and the owner smoke-tested it on an Android Studio emulator,
 including cached-photo reopening offline.
 
-Phase 10 adds an iOS host and ImageIO thumbnail channel. It remains unverified
-because the current development machine is Windows.
+Phase 10 adds an iOS host and ImageIO thumbnail channel. Its macOS simulator
+build passed, but the app has not run on an iOS device. Phase 11 adds cooperative
+native decode cancellation; native compilation awaits the next CI run.

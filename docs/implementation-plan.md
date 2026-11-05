@@ -149,5 +149,16 @@ performance profiling remains unavailable.
 
 The generated iOS host calls ImageIO from a background queue to sample grid
 thumbnails. It returns compressed bytes through the existing channel contract.
-Android-only ActivityManager memory data is not provided on iOS. The Swift code
-needs a macOS compile and iOS simulator or device smoke test.
+Android-only ActivityManager memory data is not provided on iOS. The macOS
+simulator build passed; an iOS runtime smoke test remains open.
+
+## Phase 11 - Decode cancellation and final code review
+
+1. phase-11: add cooperative native decode cancellation and regression coverage
+2. phase-11: record platform validation and remaining release checks
+
+The Dart loader forwards cancellation to Android and iOS native thumbnail work.
+Both hosts skip remaining stages when possible, while Dart avoids starting the
+Flutter codec after a cancelled native response. Work already inside a platform
+codec call may finish; its result is discarded and the scheduler slot stays held
+until completion. Dart tests pass; native CI compilation remains pending.
