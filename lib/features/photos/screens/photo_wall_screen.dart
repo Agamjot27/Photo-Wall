@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../../../app/circle_theme.dart';
 import '../../../core/images/decoded_image_loader.dart';
 import '../models/photo.dart';
 import '../models/photo_catalog.dart';
@@ -29,33 +30,9 @@ class PhotoWallScreen extends StatefulWidget {
 class _PhotoWallScreenState extends State<PhotoWallScreen> {
   final ScrollController _gridController = ScrollController();
   bool _showDiagnostics = false;
-  bool _canScrollToTop = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _gridController.addListener(_updateScrollAction);
-  }
-
-  void _updateScrollAction() {
-    final canScrollToTop = _gridController.offset > 80;
-    if (canScrollToTop != _canScrollToTop) {
-      setState(() => _canScrollToTop = canScrollToTop);
-    }
-  }
 
   void _scrollToTop() {
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _gridController.jumpTo(0);
-      return;
-    }
-    unawaited(
-      _gridController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 360),
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    if (_gridController.hasClients) _gridController.jumpTo(0);
   }
 
   void _openPhoto(Photo photo) {
@@ -113,16 +90,26 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
   Widget build(BuildContext context) {
     return FScaffold(
       childPad: false,
-      header: FHeader(
-        title: const Text('Photo Wall'),
-        suffixes: [
-          Text(
-            '${widget.photos.length} photos',
-            style: context.theme.typography.sm.copyWith(
-              color: context.theme.colors.mutedForeground,
+      header: CircleDarkHeader(
+        child: FHeader(
+          title: const Text('Photo Wall'),
+          suffixes: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: CirclePalette.lime,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${widget.photos.length} photos',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: CirclePalette.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -173,7 +160,6 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
               right: 14,
               bottom: 14,
               child: _GalleryDock(
-                canScrollToTop: _canScrollToTop,
                 showingCache: _showDiagnostics,
                 onScrollToTop: _scrollToTop,
                 onToggleCache:
@@ -189,30 +175,27 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
 
 class _GalleryDock extends StatelessWidget {
   const _GalleryDock({
-    required this.canScrollToTop,
     required this.showingCache,
     required this.onScrollToTop,
     required this.onToggleCache,
   });
 
-  final bool canScrollToTop;
   final bool showingCache;
   final VoidCallback onScrollToTop;
   final VoidCallback onToggleCache;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: colors.surface.withValues(alpha: 0.88),
+            color: CirclePalette.ink.withValues(alpha: 0.91),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: colors.outlineVariant.withValues(alpha: 0.7),
+              color: CirclePalette.lime.withValues(alpha: 0.4),
             ),
           ),
           child: Material(
@@ -222,7 +205,8 @@ class _GalleryDock extends StatelessWidget {
               children: [
                 TextButton.icon(
                   key: const ValueKey('scroll-to-top-action'),
-                  onPressed: canScrollToTop ? onScrollToTop : null,
+                  onPressed: onScrollToTop,
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
                   icon: const Icon(Icons.arrow_upward_rounded, size: 18),
                   label: const Text('Top'),
                 ),
@@ -231,7 +215,7 @@ class _GalleryDock extends StatelessWidget {
                   child: VerticalDivider(
                     width: 1,
                     thickness: 1,
-                    color: colors.outlineVariant,
+                    color: Colors.white24,
                   ),
                 ),
                 TextButton.icon(
@@ -239,7 +223,7 @@ class _GalleryDock extends StatelessWidget {
                   onPressed: onToggleCache,
                   style: TextButton.styleFrom(
                     foregroundColor:
-                        showingCache ? colors.primary : colors.onSurface,
+                        showingCache ? CirclePalette.lime : Colors.white,
                   ),
                   icon: const Icon(Icons.monitor_heart_outlined, size: 18),
                   label: const Text('Cache'),

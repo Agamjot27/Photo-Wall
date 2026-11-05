@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../../../app/circle_theme.dart';
 import '../../../core/images/decoded_image_loader.dart';
 import '../models/photo.dart';
 import '../widgets/decoded_photo_image.dart';
@@ -19,21 +20,23 @@ class PhotoViewerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return FScaffold(
       childPad: false,
-      header: FHeader.nested(
-        titleAlignment: AlignmentDirectional.centerStart,
-        title: const Text('Photo Wall'),
-        prefixes: [
-          Tooltip(
-            message: 'Back',
-            child: SizedBox.square(
-              dimension: 48,
-              child: FHeaderAction.back(
-                semanticsLabel: 'Back to photos',
-                onPress: () => Navigator.of(context).pop(),
+      header: CircleDarkHeader(
+        child: FHeader.nested(
+          titleAlignment: AlignmentDirectional.centerStart,
+          title: const Text('Photo Wall'),
+          prefixes: [
+            Tooltip(
+              message: 'Back',
+              child: SizedBox.square(
+                dimension: 48,
+                child: FHeaderAction.back(
+                  semanticsLabel: 'Back to photos',
+                  onPress: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       child: SafeArea(
         top: false,

@@ -11,6 +11,7 @@ import '../core/images/image_bytes_repository.dart';
 import '../core/images/memory_image_cache.dart';
 import '../core/images/memory_pressure_observer.dart';
 import '../features/photos/screens/photo_wall_screen.dart';
+import 'circle_theme.dart';
 
 class PhotoWallApp extends StatefulWidget {
   const PhotoWallApp({
@@ -50,16 +51,16 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
       title: 'Photo Wall',
       debugShowCheckedModeBanner: false,
       themeMode: widget.themeMode,
-      theme: FThemes.zinc.light.toApproximateMaterialTheme(),
-      darkTheme: FThemes.zinc.dark.toApproximateMaterialTheme(),
+      theme: circleLightTheme.toApproximateMaterialTheme(),
+      darkTheme: circleDarkTheme.toApproximateMaterialTheme(),
       localizationsDelegates: FLocalizations.localizationsDelegates,
       supportedLocales: FLocalizations.supportedLocales,
       builder:
           (context, child) => FTheme(
             data:
                 Theme.of(context).brightness == Brightness.dark
-                    ? FThemes.zinc.dark
-                    : FThemes.zinc.light,
+                    ? circleDarkTheme
+                    : circleLightTheme,
             child: MemoryPressureObserver(
               onPressure: _loader.handleMemoryPressure,
               onBackground:

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../../../app/circle_theme.dart';
 import '../../../core/images/decoded_image_loader.dart';
 import '../../../core/images/image_bytes_repository.dart';
 import '../../../core/images/native_image_bridge.dart';
@@ -95,21 +96,23 @@ class _CacheDiagnosticsScreenState extends State<CacheDiagnosticsScreen> {
     final memory = widget.loader.memoryCache;
     return FScaffold(
       childPad: false,
-      header: FHeader.nested(
-        title: const Text('Cache diagnostics'),
-        titleAlignment: AlignmentDirectional.centerStart,
-        prefixes: [
-          Tooltip(
-            message: 'Back',
-            child: SizedBox.square(
-              dimension: 48,
-              child: FHeaderAction.back(
-                semanticsLabel: 'Back to photos',
-                onPress: () => Navigator.of(context).pop(),
+      header: CircleDarkHeader(
+        child: FHeader.nested(
+          title: const Text('Cache diagnostics'),
+          titleAlignment: AlignmentDirectional.centerStart,
+          prefixes: [
+            Tooltip(
+              message: 'Back',
+              child: SizedBox.square(
+                dimension: 48,
+                child: FHeaderAction.back(
+                  semanticsLabel: 'Back to photos',
+                  onPress: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       child: FutureBuilder<ImageBytesRepository>(
         future: widget.repository,

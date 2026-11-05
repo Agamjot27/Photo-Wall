@@ -38,6 +38,25 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Top returns to the first row after a short scroll', (
+    tester,
+  ) async {
+    final loader = makeTestLoader();
+    await tester.pumpWidget(PhotoWallApp(loader: loader));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(GridView), const Offset(0, -50));
+    await tester.pump();
+    final position =
+        tester.state<ScrollableState>(find.byType(Scrollable)).position;
+    expect(position.pixels, greaterThan(0));
+    expect(position.pixels, lessThan(80));
+
+    await tester.tap(find.byKey(const ValueKey('scroll-to-top-action')));
+    await tester.pump();
+    expect(position.pixels, 0);
+  });
+
   testWidgets('live cache panel stays visible while scrolling and can hide', (
     tester,
   ) async {
