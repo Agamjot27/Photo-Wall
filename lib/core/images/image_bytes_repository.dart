@@ -1,10 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' show Codec, ImmutableBuffer;
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart';
 
 import 'disk_image_cache.dart';
 import 'load_scheduler.dart';
@@ -17,11 +13,17 @@ class ImageBytesRepository {
 
   final DiskImageCache cache;
   final ImageFetcher? _fetchOverride;
+  HttpClient? _client;
   int _activeDownloads = 0;
   int _cacheGeneration = 0;
   Future<void>? _clearPending;
 
   int get activeDownloads => _activeDownloads;
+
+  void dispose() {
+    _client?.close(force: true);
+    _client = null;
+  }
 
   Future<(Uint8List, bool)> load(
     String url, {
@@ -67,7 +69,14 @@ class ImageBytesRepository {
       final uri = Uri.parse(url);
       bytes =
           await (_fetchOverride?.call(uri) ??
-              fetchImageBytes(uri, cancellation: cancellation));
+              fetchImageBytes(
+                uri,
+                client:
+                    _client ??=
+                        HttpClient()
+                          ..connectionTimeout = const Duration(seconds: 10),
+                cancellation: cancellation,
+              ));
     } finally {
       _activeDownloads--;
     }
@@ -100,14 +109,60 @@ Future<Uint8List> fetchImageBytes(
   Uri url, {
   Duration timeout = const Duration(seconds: 30),
   LoadCancellation? cancellation,
+  HttpClient? client,
 }) async {
   cancellation?.throwIfCancelled();
-  final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
-  try {
-    final fetch = (() async {
-      final request = await client.getUrl(url);
-      final response = await request.close();
+  final ownsClient = client == null;
+  final activeClient =
+      client ?? (HttpClient()..connectionTimeout = const Duration(seconds: 10));
+  final result = Completer<Uint8List>();
+  HttpClientRequest? pendingRequest;
+  StreamSubscription<List<int>>? subscription;
+  void fail(Object error, StackTrace stack) {
+    if (!result.isCompleted) result.completeError(error, stack);
+  }
+
+  void abortTransport() {
+    pendingRequest?.abort();
+    final currentSubscription = subscription;
+    if (currentSubscription != null) unawaited(currentSubscription.cancel());
+  }
+
+  final deadline = Timer(timeout, () {
+    fail(
+      TimeoutException('Image request timed out', timeout),
+      StackTrace.current,
+    );
+    abortTransport();
+  });
+  if (cancellation != null) {
+    unawaited(
+      cancellation.whenCancelled.then((_) {
+        fail(LoadCancelled(), StackTrace.current);
+        abortTransport();
+      }),
+    );
+  }
+
+  unawaited(() async {
+    try {
+      pendingRequest = await activeClient.getUrl(url);
+      if (result.isCompleted) {
+        abortTransport();
+        return;
+      }
+      cancellation?.throwIfCancelled();
+      final response = await pendingRequest!.close();
+      pendingRequest = null;
+      if (result.isCompleted) {
+        subscription = response.listen((_) {});
+        await subscription!.cancel();
+        return;
+      }
+      cancellation?.throwIfCancelled();
       if (response.statusCode != HttpStatus.ok) {
+        subscription = response.listen((_) {});
+        await subscription!.cancel();
         throw HttpException(
           'Image request failed: ${response.statusCode}',
           uri: url,
@@ -115,66 +170,41 @@ Future<Uint8List> fetchImageBytes(
       }
       const maximumBytes = 20 * 1024 * 1024;
       final builder = BytesBuilder(copy: false);
-      await for (final chunk in response) {
-        if (builder.length + chunk.length > maximumBytes) {
-          throw const FormatException('Image response exceeds 20 MiB');
-        }
-        builder.add(chunk);
-      }
-      if (builder.length == 0) {
-        throw const FormatException('Empty image response');
-      }
-      return builder.takeBytes();
-    })().timeout(timeout);
-    if (cancellation == null) return await fetch;
-    return await Future.any<Uint8List>([
-      fetch,
-      cancellation.whenCancelled.then((_) {
-        client.close(force: true);
-        throw LoadCancelled();
-      }),
-    ]);
-  } finally {
-    client.close(force: true);
-  }
-}
-
-/// Phase 3 still uses Flutter's decoded ImageCache; Phase 4 replaces that layer.
-class DiskCachedImageProvider extends ImageProvider<String> {
-  const DiskCachedImageProvider({required this.url, required this.repository});
-
-  final String url;
-  final Future<ImageBytesRepository> repository;
-
-  @override
-  Future<String> obtainKey(ImageConfiguration configuration) =>
-      SynchronousFuture(url);
-
-  @override
-  ImageStreamCompleter loadImage(String key, ImageDecoderCallback decode) {
-    return MultiFrameImageStreamCompleter(codec: _loadCodec(decode), scale: 1);
-  }
-
-  Future<Codec> _loadCodec(ImageDecoderCallback decode) async {
-    final source = await repository;
-    final (bytes, fromDisk) = await source.load(url);
-    try {
-      return await decode(await ImmutableBuffer.fromUint8List(bytes));
-    } catch (_) {
-      if (!fromDisk) rethrow;
-      await source.invalidate(url);
-      return decode(
-        await ImmutableBuffer.fromUint8List(await source.download(url)),
+      subscription = response.listen(
+        (chunk) {
+          if (builder.length + chunk.length > maximumBytes) {
+            fail(
+              const FormatException('Image response exceeds 20 MiB'),
+              StackTrace.current,
+            );
+            abortTransport();
+            return;
+          }
+          builder.add(chunk);
+        },
+        onError: fail,
+        onDone: () {
+          if (builder.length == 0) {
+            fail(
+              const FormatException('Empty image response'),
+              StackTrace.current,
+            );
+          } else if (!result.isCompleted) {
+            result.complete(builder.takeBytes());
+          }
+        },
+        cancelOnError: true,
       );
+    } catch (error, stack) {
+      fail(error, stack);
+      abortTransport();
     }
+  }());
+  try {
+    return await result.future;
+  } finally {
+    deadline.cancel();
+    abortTransport();
+    if (ownsClient) activeClient.close(force: true);
   }
-
-  @override
-  bool operator ==(Object other) =>
-      other is DiskCachedImageProvider &&
-      other.url == url &&
-      identical(other.repository, repository);
-
-  @override
-  int get hashCode => Object.hash(url, identityHashCode(repository));
 }

@@ -10,31 +10,29 @@ import '../core/images/decoded_image_loader.dart';
 import '../core/images/image_bytes_repository.dart';
 import '../core/images/memory_image_cache.dart';
 import '../core/images/memory_pressure_observer.dart';
-import '../features/photos/models/photo.dart';
-import '../features/photos/screens/cache_diagnostics_screen.dart';
 import '../features/photos/screens/photo_wall_screen.dart';
-import '../features/photos/widgets/photo_image.dart';
 
 class PhotoWallApp extends StatefulWidget {
   const PhotoWallApp({
     this.themeMode = ThemeMode.system,
-    this.imageProviderFactory,
+    this.loader,
     super.key,
   });
 
   final ThemeMode themeMode;
-  final PhotoImageProviderFactory? imageProviderFactory;
+  final DecodedImageLoader? loader;
 
   @override
   State<PhotoWallApp> createState() => _PhotoWallAppState();
 }
 
 class _PhotoWallAppState extends State<PhotoWallApp> {
-  late final Future<ImageBytesRepository> _repository = _openRepository();
-  late final DecodedImageLoader _decodedLoader = DecodedImageLoader(
-    repository: _repository,
-    memoryCache: MemoryImageCache(),
-  );
+  late final DecodedImageLoader _loader =
+      widget.loader ??
+      DecodedImageLoader(
+        repository: _openRepository(),
+        memoryCache: MemoryImageCache(),
+      );
 
   Future<ImageBytesRepository> _openRepository() async {
     final root = await getTemporaryDirectory();
@@ -44,30 +42,6 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
     final cache = DiskImageCache(directory);
     await cache.initialize();
     return ImageBytesRepository(cache);
-  }
-
-  ImageProvider<Object> _imageProvider(
-    Photo photo, {
-    required bool fullScreen,
-  }) {
-    return DiskCachedImageProvider(
-      url: fullScreen ? photo.fullScreenUrl : photo.thumbnailUrl,
-      repository: _repository,
-    );
-  }
-
-  void _openDiagnostics(BuildContext context) {
-    unawaited(
-      Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder:
-              (context) => CacheDiagnosticsScreen(
-                loader: _decodedLoader,
-                repository: _repository,
-              ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -86,31 +60,34 @@ class _PhotoWallAppState extends State<PhotoWallApp> {
                 Theme.of(context).brightness == Brightness.dark
                     ? FThemes.zinc.dark
                     : FThemes.zinc.light,
-            child:
-                widget.imageProviderFactory == null
-                    ? MemoryPressureObserver(
-                      onPressure: _decodedLoader.handleMemoryPressure,
-                      child: child!,
-                    )
-                    : child!,
+            child: MemoryPressureObserver(
+              onPressure: _loader.handleMemoryPressure,
+              onBackground:
+                  () => unawaited(
+                    _loader.repository.then<void>(
+                      (repository) => repository.cache.flushAccesses(),
+                      onError: (Object _, StackTrace __) {},
+                    ),
+                  ),
+              child: child!,
+            ),
           ),
-      home: PhotoWallScreen(
-        imageProviderFactory: widget.imageProviderFactory ?? _imageProvider,
-        decodedLoader:
-            widget.imageProviderFactory == null ? _decodedLoader.load : null,
-        decodedRequestFactory:
-            widget.imageProviderFactory == null ? _decodedLoader.request : null,
-        onOpenDiagnostics:
-            widget.imageProviderFactory == null ? _openDiagnostics : null,
-      ),
+      home: PhotoWallScreen(loader: _loader),
     );
   }
 
   @override
   void dispose() {
-    if (widget.imageProviderFactory == null) {
-      _decodedLoader.memoryCache.clear();
-    }
+    _loader.memoryCache.clear();
+    unawaited(
+      _loader.repository.then<void>((repository) async {
+        try {
+          await repository.cache.flushAccesses();
+        } finally {
+          repository.dispose();
+        }
+      }, onError: (Object _, StackTrace __) {}),
+    );
     super.dispose();
   }
 }

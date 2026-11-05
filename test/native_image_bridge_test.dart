@@ -74,6 +74,26 @@ void main() {
   });
 
   test(
+    'native failure falls back to Flutter without losing source bytes',
+    () async {
+      final imageBytes = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
+      );
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => throw PlatformException(code: 'DECODE_FAILED'),
+      );
+      final image = await decodePhoto(
+        imageBytes,
+        fullScreen: false,
+        nativeBridge: NativeImageBridge(channel: channel),
+      );
+      expect((image.width, image.height), (1, 1));
+      image.dispose();
+    },
+  );
+
+  test(
     'abandoned thumbnail cancels native work before Flutter decode',
     () async {
       final started = Completer<int>();

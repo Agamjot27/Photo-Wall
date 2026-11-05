@@ -57,6 +57,50 @@ void main() {
     }
   });
 
+  test(
+    'cancelling one download does not close another shared request',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'photo-wall-shared-client-',
+      );
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final slowStarted = Completer<HttpRequest>();
+      final fastStarted = Completer<HttpRequest>();
+      server.listen((request) {
+        if (request.uri.path == '/slow') {
+          slowStarted.complete(request);
+        } else {
+          fastStarted.complete(request);
+        }
+      });
+      ImageBytesRepository? source;
+      try {
+        final disk = DiskImageCache(directory);
+        await disk.initialize();
+        source = ImageBytesRepository(disk);
+        final cancellation = LoadCancellation();
+        final slow = source.download(
+          'http://127.0.0.1:${server.port}/slow',
+          cancellation: cancellation,
+        );
+        final slowFailure = expectLater(slow, throwsA(isA<LoadCancelled>()));
+        final fast = source.download('http://127.0.0.1:${server.port}/fast');
+        await Future.wait([slowStarted.future, fastStarted.future]);
+        cancellation.cancel();
+        await slowFailure;
+        final fastRequest = await fastStarted.future;
+        fastRequest.response.add([1, 2, 3]);
+        await fastRequest.response.close();
+        expect(await fast, [1, 2, 3]);
+        expect(source.activeDownloads, 0);
+      } finally {
+        source?.dispose();
+        await server.close(force: true);
+        await directory.delete(recursive: true);
+      }
+    },
+  );
+
   test('disk hit avoids a second download, even after cache restart', () async {
     final directory = await Directory.systemTemp.createTemp(
       'photo-wall-source-test-',

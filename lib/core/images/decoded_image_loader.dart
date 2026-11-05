@@ -215,17 +215,25 @@ Future<ui.Image> decodePhoto(
   LoadCancellation? cancellation,
 }) async {
   cancellation?.throwIfCancelled();
-  final sourceBytes =
-      !fullScreen &&
-              (nativeBridge != null || Platform.isAndroid || Platform.isIOS)
-          ? (await (nativeBridge ?? NativeImageBridge()).decodeDownsampled(
+  var sourceBytes = bytes;
+  if (!fullScreen &&
+      (nativeBridge != null || Platform.isAndroid || Platform.isIOS)) {
+    try {
+      sourceBytes =
+          (await (nativeBridge ?? NativeImageBridge()).decodeDownsampled(
             bytes: bytes,
             maxWidth: 400,
             maxHeight: 400,
             format: 'jpeg',
             cancellation: cancellation,
-          )).bytes
-          : bytes;
+          )).bytes;
+    } on LoadCancelled {
+      rethrow;
+    } catch (_) {
+      // A channel failure does not make valid compressed source bytes corrupt.
+      sourceBytes = bytes;
+    }
+  }
   cancellation?.throwIfCancelled();
   final codec = await ui.instantiateImageCodec(
     sourceBytes,

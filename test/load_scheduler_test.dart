@@ -64,4 +64,18 @@ void main() {
       expect(scheduler.queuedCount, 0);
     },
   );
+
+  test('newly queued grid work runs before older offscreen work', () async {
+    final scheduler = LoadScheduler(maxActive: 1);
+    final gate = Completer<void>();
+    final started = <String>[];
+    final active = scheduler.schedule(() async {
+      await gate.future;
+    });
+    final older = scheduler.schedule(() async => started.add('older'));
+    final newer = scheduler.schedule(() async => started.add('newer'));
+    gate.complete();
+    await Future.wait([active.future, older.future, newer.future]);
+    expect(started, ['newer', 'older']);
+  });
 }

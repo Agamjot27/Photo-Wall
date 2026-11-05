@@ -56,7 +56,7 @@ class LoadScheduler {
   void _drain() {
     while (_active < maxActive && queuedCount > 0) {
       final job =
-          _urgent.isNotEmpty ? _urgent.removeFirst() : _normal.removeFirst();
+          _urgent.isNotEmpty ? _urgent.removeFirst() : _normal.removeLast();
       if (job.cancelled) continue;
       job.started = true;
       _active++;

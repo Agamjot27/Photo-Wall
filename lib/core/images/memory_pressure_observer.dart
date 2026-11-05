@@ -5,10 +5,12 @@ class MemoryPressureObserver extends StatefulWidget {
   const MemoryPressureObserver({
     required this.onPressure,
     required this.child,
+    this.onBackground,
     super.key,
   });
 
   final VoidCallback onPressure;
+  final VoidCallback? onBackground;
   final Widget child;
 
   @override
@@ -26,6 +28,14 @@ class _MemoryPressureObserverState extends State<MemoryPressureObserver>
   @override
   void didHaveMemoryPressure() {
     widget.onPressure();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      widget.onBackground?.call();
+    }
   }
 
   @override

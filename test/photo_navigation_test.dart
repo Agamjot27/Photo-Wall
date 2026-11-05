@@ -2,21 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_wall/features/photos/screens/photo_viewer_screen.dart';
 import 'package:photo_wall/features/photos/screens/photo_wall_screen.dart';
-import 'package:photo_wall/features/photos/widgets/photo_image.dart';
+import 'package:photo_wall/features/photos/widgets/decoded_photo_image.dart';
 
-import 'support/test_images.dart';
+import 'support/test_loader.dart';
 
 void main() {
   testWidgets(
     'viewer opens selected photo and both back paths preserve scroll',
     (tester) async {
-      final image = await readyTestImage(tester);
+      final loader = makeTestLoader();
       await tester.pumpWidget(
-        MaterialApp(
-          home: PhotoWallScreen(
-            imageProviderFactory: (photo, {required fullScreen}) => image,
-          ),
-        ),
+        MaterialApp(home: PhotoWallScreen(loader: loader)),
       );
       await tester.pumpAndSettle();
       await tester.drag(find.byType(GridView), const Offset(0, -1200));
@@ -29,8 +25,11 @@ void main() {
       final tile = find.byType(InkWell).hitTestable().first;
       final photo =
           tester
-              .widget<PhotoImage>(
-                find.descendant(of: tile, matching: find.byType(PhotoImage)),
+              .widget<DecodedPhotoImage>(
+                find.descendant(
+                  of: tile,
+                  matching: find.byType(DecodedPhotoImage),
+                ),
               )
               .photo;
 
@@ -44,7 +43,14 @@ void main() {
         photo.id,
       );
       expect(
-        tester.widget<PhotoImage>(find.byType(PhotoImage)).fullScreen,
+        tester
+            .widget<DecodedPhotoImage>(
+              find.descendant(
+                of: find.byType(PhotoViewerScreen),
+                matching: find.byType(DecodedPhotoImage),
+              ),
+            )
+            .fullScreen,
         isTrue,
       );
       await tester.pageBack();

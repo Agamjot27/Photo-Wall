@@ -20,6 +20,10 @@ class DiskImageCache {
   Future<void> _tail = Future<void>.value();
   bool _ready = false;
   int _bytes = 0;
+  bool _accessDirty = false;
+  DateTime? _lastAccessPersist;
+
+  static const accessPersistInterval = Duration(seconds: 2);
 
   int get sizeBytes => _bytes;
 
@@ -66,7 +70,9 @@ class DiskImageCache {
         }
       }
     }
-    for (final file in directory.listSync().whereType<File>()) {
+    await for (final entity in directory.list()) {
+      if (entity is! File) continue;
+      final file = entity;
       final name = file.uri.pathSegments.last;
       if (name.endsWith('.img') &&
           !_entries.containsKey(name.substring(0, name.length - 4))) {
@@ -97,8 +103,13 @@ class DiskImageCache {
         await _persist();
         return null;
       }
-      entry.accessed = _clock().microsecondsSinceEpoch;
-      await _persist();
+      final now = _clock();
+      entry.accessed = now.microsecondsSinceEpoch;
+      _accessDirty = true;
+      if (_lastAccessPersist == null ||
+          now.difference(_lastAccessPersist!) >= accessPersistInterval) {
+        await _persist();
+      }
       return bytes;
     } on FileSystemException {
       await _remove(key);
@@ -144,6 +155,10 @@ class DiskImageCache {
     await _persist();
   });
 
+  Future<void> flushAccesses() => _serialized(() async {
+    if (_accessDirty) await _persist();
+  });
+
   Future<void> _remove(String key) async {
     final entry = _entries.remove(key);
     if (entry != null) _bytes -= entry.length;
@@ -183,6 +198,8 @@ class DiskImageCache {
     try {
       await part.rename(index.path);
       if (await backup.exists()) await backup.delete();
+      _accessDirty = false;
+      _lastAccessPersist = _clock();
     } catch (_) {
       if (await backup.exists() && !await index.exists()) {
         await backup.rename(index.path);

@@ -1,10 +1,10 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:forui/forui.dart';
 import 'package:photo_wall/app/photo_wall_app.dart';
-import 'package:photo_wall/features/photos/screens/photo_wall_screen.dart';
+import 'package:photo_wall/features/photos/widgets/decoded_photo_image.dart';
+
+import 'support/test_loader.dart';
 
 void main() {
   testWidgets('Forui gallery fits a narrow screen in dark mode', (
@@ -14,20 +14,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final image = MemoryImage(
-      base64Decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
-      ),
-    );
+    final loader = makeTestLoader();
     await tester.pumpWidget(
-      PhotoWallApp(
-        themeMode: ThemeMode.dark,
-        imageProviderFactory: (photo, {required fullScreen}) => image,
-      ),
+      PhotoWallApp(themeMode: ThemeMode.dark, loader: loader),
     );
-    await tester.runAsync(() async {
-      await precacheImage(image, tester.element(find.byType(PhotoWallScreen)));
-    });
     await tester.pumpAndSettle();
     expect(find.byType(FScaffold), findsOneWidget);
     expect(find.text('100 photos'), findsOneWidget);
@@ -35,19 +25,8 @@ void main() {
   });
 
   testWidgets('app starts on a lazy three-column photo grid', (tester) async {
-    final image = MemoryImage(
-      base64Decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
-      ),
-    );
-    await tester.pumpWidget(
-      PhotoWallApp(
-        imageProviderFactory: (photo, {required fullScreen}) => image,
-      ),
-    );
-    await tester.runAsync(() async {
-      await precacheImage(image, tester.element(find.byType(PhotoWallScreen)));
-    });
+    final loader = makeTestLoader();
+    await tester.pumpWidget(PhotoWallApp(loader: loader));
     await tester.pumpAndSettle();
 
     expect(find.text('Photo Wall'), findsOneWidget);
@@ -55,7 +34,33 @@ void main() {
     final delegate =
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(delegate.crossAxisCount, 3);
-    expect(find.byType(Image).evaluate().length, lessThan(100));
+    expect(find.byType(DecodedPhotoImage).evaluate().length, lessThan(100));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('live cache panel stays visible while scrolling and can hide', (
+    tester,
+  ) async {
+    final loader = makeTestLoader();
+    await tester.pumpWidget(PhotoWallApp(loader: loader));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('cache-debug-panel')), findsNothing);
+
+    await tester.tap(find.byIcon(FIcons.activity));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('cache-debug-panel')), findsOneWidget);
+    expect(find.textContaining('Evictions'), findsOneWidget);
+    expect(find.textContaining('Downloads'), findsOneWidget);
+
+    await tester.drag(find.byType(GridView), const Offset(0, -900));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('cache-debug-panel')), findsOneWidget);
+    await tester.tap(find.byIcon(FIcons.activity));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('cache-debug-panel')), findsNothing);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
     expect(tester.takeException(), isNull);
   });
 }

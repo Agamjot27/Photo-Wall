@@ -45,6 +45,10 @@ class MainActivity : FlutterActivity() {
                                     mainHandler.post {
                                         result.error("INVALID_ARGUMENTS", error.message, null)
                                     }
+                                } catch (error: OutOfMemoryError) {
+                                    mainHandler.post {
+                                        result.error("OUT_OF_MEMORY", "Native image decode ran out of memory", null)
+                                    }
                                 } catch (error: Exception) {
                                     mainHandler.post {
                                         result.error("DECODE_FAILED", error.message, null)

@@ -7,32 +7,24 @@ import 'package:photo_wall/features/photos/screens/photo_viewer_screen.dart';
 import 'package:photo_wall/features/photos/screens/photo_wall_screen.dart';
 import 'package:photo_wall/features/photos/widgets/decoded_photo_image.dart';
 
-ui.Image makeImage() {
-  final recorder = ui.PictureRecorder();
-  ui.Canvas(recorder).drawColor(const Color(0xFF123456), ui.BlendMode.src);
-  final picture = recorder.endRecording();
-  final image = picture.toImageSync(2, 2);
-  picture.dispose();
-  return image;
-}
+import 'support/test_loader.dart';
 
 void main() {
   testWidgets('leaving viewer releases each fullscreen decoded image', (
     tester,
   ) async {
     final fullImages = <ui.Image>[];
-    Future<ui.Image> load(photo, {required bool fullScreen}) async {
-      final image = makeImage();
-      if (fullScreen) fullImages.add(image);
-      return image;
-    }
+    final loader = makeTestLoader(
+      decoder: (_, {required fullScreen}) async {
+        final image = makeTestImage();
+        if (fullScreen) fullImages.add(image);
+        return image;
+      },
+    );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PhotoWallScreen(
-          photos: [photoCatalog.first],
-          decodedLoader: load,
-        ),
+        home: PhotoWallScreen(photos: [photoCatalog.first], loader: loader),
       ),
     );
     await tester.pumpAndSettle();

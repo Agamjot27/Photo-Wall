@@ -48,6 +48,32 @@ void main() {
   });
 
   test(
+    'reads batch index writes and a flush preserves LRU across restart',
+    () async {
+      var time = 0;
+      DateTime clock() => DateTime.fromMicrosecondsSinceEpoch(++time);
+      final cache = DiskImageCache(directory, maxBytes: 10, clock: clock);
+      await cache.initialize();
+      await cache.write('a', bytes(4, 1));
+      await cache.write('b', bytes(4, 2));
+      final index = File(
+        '${directory.path}${Platform.pathSeparator}index.json',
+      );
+      final beforeRead = await index.readAsString();
+      expect(await cache.read('a'), bytes(4, 1));
+      expect(await index.readAsString(), beforeRead);
+
+      await cache.flushAccesses();
+      expect(await index.readAsString(), isNot(beforeRead));
+      final reopened = DiskImageCache(directory, maxBytes: 10, clock: clock);
+      await reopened.initialize();
+      await reopened.write('c', bytes(4, 3));
+      expect(await reopened.read('a'), bytes(4, 1));
+      expect(await reopened.read('b'), isNull);
+    },
+  );
+
+  test(
     'recovers missing files, partial files, and stale size metadata',
     () async {
       final cache = DiskImageCache(directory, maxBytes: 10);
