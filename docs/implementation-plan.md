@@ -78,8 +78,8 @@ scrolling, no duplicate work for identical active requests, and graceful failure
 Implemented: a three-slot scheduler across disk/network/decode, urgent viewer
 queue, identical-request sharing, queued cancellation, and widget generation
 checks. Tests cover permit limits, priority, failures, shared subscribers,
-and cancellation replacement races. Active transport cancellation and prefetch
-remain optional and are not implemented.
+and cancellation replacement races. Active transport cancellation is added in
+Phase 9; prefetch remains optional and is not implemented.
 
 ## Phase 6 - Memory lifecycle
 
@@ -119,19 +119,25 @@ Acceptance: required behavior verified, Android performance inspected, README
 complete, working release APK smoke-tested, public repository and APK ready.
 Keep artifacts out of source history; distribute the APK as a release attachment.
 
-In progress: acceptance tests exercise cold/warm loading, disk fallback, offline
-restart, and corrupt-disk recovery through the real decoder. The release build
-is currently blocked in the agent session by Gradle's local daemon socket error,
-before Android compilation. An Android APK workflow is prepared as a fallback;
-its first run and the artifact still require verification. Profile-mode and final
-APK checks remain open.
+Acceptance tests exercise cold/warm loading, disk fallback, offline restart, and
+corrupt-disk recovery through the real decoder. The agent-session release build
+remains blocked before compilation by Gradle's local daemon socket error. The
+Phase 8 cloud workflow built an APK successfully, but that artifact still needs
+an Android smoke test. Profile-mode and final APK checks remain open.
 
 ## Optional phase 9 - Native Android bonus
 
-1. feat(android): add downsampled decoding MethodChannel
-2. feat(android): expose memory information and integrate native decoding
-3. test: validate native image decoding and channel failures
+1. phase-9: cancel abandoned active image work
+2. phase-9: add Android downsampling and memory MethodChannel
+3. phase-9: verify channel contracts and document native tradeoffs
 
 Use channel com.assignment.photowall/image with decodeDownsampled and
 getMemoryInfo, following the assignment's request/response contract.
 Only start after the required app is stable.
+
+In progress: active HTTP requests close when their final subscriber leaves;
+late decoded images are discarded. The Android channel implementation and Dart
+bridge are written, and thumbnails use native downsampling on Android. Dart tests
+pass, but Kotlin compilation and on-device profiling are pending until a build
+containing this code runs. The Phase 8 cloud build succeeded before Phase 9 and
+produced an APK artifact; it has not yet been smoke-tested.

@@ -16,8 +16,11 @@ disk before network and retains files across restarts. Phase 4 adds a custom
 jobs to three and shares identical requests.
 Phase 6 trims decoded images on system memory pressure. Phase 7 adds a live
 diagnostics screen and manual cache clearing.
-Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, loading
-indicator, and retry control. The grid remains a lazy Flutter GridView.
+Phase 9 work adds active HTTP cancellation and optional Android native
+thumbnail downsampling and memory information.
+Forui 0.11.1 provides the light/dark themes, gallery and viewer headers, and
+loading indicator. Failed images use a labeled Material Retry button. The grid
+remains a lazy Flutter GridView.
 See [the implementation plan](docs/implementation-plan.md) for phase boundaries.
 
 ## Requirements and design
@@ -77,6 +80,7 @@ lib/
     image_bytes_repository.dart
     memory_image_cache.dart
     decoded_image_loader.dart
+    native_image_bridge.dart
     load_scheduler.dart
     memory_pressure_observer.dart
   features/photos/
@@ -105,7 +109,8 @@ test/
 ~~~
 
 UI remains in features/photos. Loading, decoding, and both caches live in
-core/images, including the Phase 5 scheduler.
+core/images, including the Phase 5 scheduler. Android native methods live in
+android/app/src/main/kotlin/com/assignment/photo_wall.
 
 ## Photo source and current behavior
 
@@ -167,12 +172,17 @@ and decode. Full-screen requests enter a higher-priority queue; jobs already
 running are not preempted. Identical active requests share one job. Each
 subscriber receives its own decoded-image handle and can leave independently.
 When the last subscriber leaves a queued job, it is removed before starting.
-An active job may continue after its last subscriber leaves; its result is
-disposed when complete. Widgets also check their request generation before
-displaying a result, preventing a late response from replacing another photo.
+An active request receives a cancellation signal; its result is discarded if
+the underlying operation finishes later. Widgets also check their request
+generation before displaying a result, preventing a late response from
+replacing another photo.
 
-The current scheduler does not prefetch or cancel active HTTP/codec work.
-Different URL variants do not share their compressed source request.
+When the last subscriber leaves an active network request, the HTTP client is
+closed and its scheduler slot is released after the request ends. A queued job
+is removed before starting. A decode already underway cannot be interrupted,
+but a cancelled result is disposed rather than displayed or cached. The
+scheduler does not prefetch. Different URL variants do not share their
+compressed source request.
 
 ## Cache diagnostics and clearing
 
@@ -180,6 +190,8 @@ Tap the activity icon in the gallery header to see live decoded-memory bytes,
 compressed-disk bytes, memory eviction count, active downloads, active decodes,
 and queued image jobs. Counters refresh while the screen is open. Cache sizes
 cover stored entries, not visible image handles or temporary buffers.
+On Android, the panel also shows available and total system memory, the low-memory
+threshold, and the low-memory flag reported by ActivityManager.
 
 The Clear caches button removes cache-owned decoded images and compressed files.
 Visible images remain usable. Requests already in progress may finish displaying,
@@ -203,8 +215,19 @@ The app also clears cache-owned handles when its root widget is disposed.
 
 ## Optional native integration
 
-Not implemented. Android MethodChannel downsampling and memory information are
-reserved for a separate bonus phase after the required functionality is stable.
+The Android bonus uses MethodChannel `com.assignment.photowall/image`.
+`decodeDownsampled` accepts either a local path or compressed bytes plus output
+limits and format; it returns output dimensions and compressed bytes. Android
+uses BitmapFactory sampling, scales within the requested bounds, and encodes PNG
+or JPEG on a background worker. Grid thumbnails invoke it after disk/network
+resolution and then decode the returned JPEG with Flutter for display. The
+full-screen viewer keeps the Flutter decode path. `getMemoryInfo` reports
+ActivityManager's approximate available, total, threshold, and low-memory data.
+The channel input/output is validated on the Dart side and covered by mock-channel
+tests. Re-encoding introduces extra CPU and a temporary byte copy; it needs
+Android profile testing before claiming a performance gain. The native Kotlin
+code has not yet been compiled in the cloud or smoke-tested on a device.
+iOS native integration remains unimplemented.
 
 ## Android build and validation status
 
@@ -235,7 +258,13 @@ Validation status:
   the user clears both caches.
 - Phase 8 tests cover cold/warm cache paths, offline restart, and corrupt-disk
   recovery using the production decoder.
+- Phase 9 tests cover active HTTP cancellation, scheduler slot recovery,
+  cancelled decode disposal, and the native MethodChannel response contract.
 - An Android 15 emulator is now detected as emulator-5556.
+- The [first cloud release workflow](https://github.com/Agamjot27/Photo-Wall/actions/runs/41975602529)
+  completed successfully and uploaded
+  an APK artifact. That build predates the Phase 9 native code and has not been
+  installed or smoke-tested here.
 - The agent-session release build fails before Android compilation because the
   Gradle client cannot open its local daemon socket (`PipeImpl`,
   `Invalid argument: connect`). This is separate from the owner's successful
@@ -253,7 +282,7 @@ packaging and signing decisions will be reviewed during submission preparation.
 
 ## Tradeoffs and incomplete features
 
-This is a Phase 8 checkpoint, not a complete submission. A verified final APK
-and on-device acceptance checks remain outstanding. Native integration is not
-implemented. The custom memory budget does not cap temporary or total process
-memory.
+This is a Phase 9 checkpoint, not a complete submission. The native Android
+bonus needs a cloud build and device smoke test; final APK and profile-mode
+acceptance checks remain outstanding. The custom memory budget does not cap
+temporary or total process memory.

@@ -79,10 +79,10 @@ that a separate full-screen network variant is available offline.
 
 | ID | Enhancement | Scope |
 | --- | --- | --- |
-| O01 | Request cancellation | Cancel no-longer-needed downloads where feasible; required stale-result ignoring does not depend on cancellation. |
-| O02 | Decode cancellation | Cancel pending decode work; if a native decode cannot stop, discard its result safely. |
+| O01 | Request cancellation | Implemented for queued work and active HTTP requests after their final subscriber leaves. |
+| O02 | Decode cancellation | In-flight decode cannot be interrupted; cancelled results are disposed safely. |
 | O03 | Manual cache clear | Clear cached content safely during active work. Implemented in Phase 7; optional in the assignment. |
-| O04 | Android native integration | Implement decodeDownsampled and getMemoryInfo over the specified MethodChannel, then use native decoding for grid thumbnails. |
+| O04 | Android native integration | Dart bridge and Kotlin methods are written; compilation, device testing, and profiling remain pending. |
 | O05 | iOS integration | Additional bonus only; not currently scheduled. |
 
 Optional features cannot displace mandatory correctness or submission work.
@@ -131,3 +131,9 @@ network request, and explicit Retry state. Phase 8 acceptance tests cover the
 cold, memory-hit, disk-hit, offline-restart, and corrupt-disk paths. Native work
 remains optional. Android performance checks and a verified release APK remain
 pending; the agent-session Gradle client fails to connect to its local daemon.
+
+Phase 9 work adds active HTTP cancellation and Android native downsampling and
+memory information. The Dart channel contract tests pass. The first Phase 8
+cloud APK build succeeded, but it predates Phase 9 and has not been installed
+or smoke-tested. The native Android code still needs cloud compilation and device
+verification.

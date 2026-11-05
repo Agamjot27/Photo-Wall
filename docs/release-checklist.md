@@ -40,8 +40,11 @@ Install and smoke-test that artifact before attaching it to a release.
 
 ## Evidence so far
 
-- Automated formatting, analysis, and 33 tests pass on 2026-11-05.
+- Automated formatting, analysis, and 40 tests pass on 2026-11-05.
 - A debug emulator displayed the grid and full-screen viewer after a hot restart.
+- The Phase 8 baseline GitHub workflow succeeded and uploaded an APK artifact,
+  but that artifact has not been installed or smoke-tested. It predates the
+  native Android bonus.
 - The agent-session release build fails before Android compilation when Gradle
   attempts to connect its local daemon (`PipeImpl`, `Invalid argument: connect`).
   A release APK and profile-mode observations are therefore still pending.

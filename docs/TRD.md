@@ -339,9 +339,10 @@ The legacy framework ImageProvider remains only as an injectable test path.
 Phase 5 adds one three-slot scheduler around each disk/network/decode job.
 Full-screen jobs have queue priority, identical decoded requests share work,
 and queued jobs cancel when their last subscriber leaves. Active jobs complete
-for any remaining subscribers; unneeded results are disposed. Different source
-variants are not yet deduplicated together, and active HTTP/codec cancellation
-remains optional.
+for any remaining subscribers; unneeded results are disposed. Phase 9 work
+also closes active HTTP requests after their last subscriber leaves. Native
+and Flutter decodes already underway may finish, but cancelled results are
+disposed. Different source variants are not yet deduplicated together.
 
 Phase 6 registers a WidgetsBindingObserver for memory pressure, clears
 cache-owned decoded handles, and advances an admission epoch so earlier
@@ -359,6 +360,11 @@ An Android emulator is detected. Debug grid and viewer interaction was observed,
 but profile-mode performance verification and the final release APK remain
 pending. The agent-session Gradle client fails before compilation when opening
 its local daemon connection (`PipeImpl` / `Invalid argument: connect`).
+
+The first Phase 8 cloud APK workflow succeeded and uploaded an artifact. That
+build predates Phase 9 and has not been installed or smoke-tested. Phase 9 adds
+Android MethodChannel methods, Dart response validation, and native downsampling
+for thumbnails; Kotlin compilation and Android profiling remain pending.
 
 Before submission, complete the required phases, resolve Android verification,
 review release signing (currently the template's debug signing), and produce a
