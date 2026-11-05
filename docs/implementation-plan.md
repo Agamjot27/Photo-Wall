@@ -162,3 +162,17 @@ Both hosts skip remaining stages when possible, while Dart avoids starting the
 Flutter codec after a cancelled native response. Work already inside a platform
 codec call may finish; its result is discarded and the scheduler slot stays held
 until completion. Dart tests pass; native CI compilation remains pending.
+
+## Phase 12 - Submission review improvements
+
+1. phase-12: put live diagnostics over the grid, remove the legacy image path,
+   and improve native fallback, scheduling, HTTP reuse, and disk index writes
+2. phase-12: rewrite submission documentation and add final release checks
+
+The live overlay exposes cache bytes, evictions, downloads, and decodes while
+scrolling; detailed diagnostics still provide clearing and Android memory data.
+The obsolete Flutter-global ImageCache path is removed. Native channel failure
+falls back to Flutter decoding without invalidating a valid disk file. Queued
+grid work runs newest first; one HTTP client is reused; disk read recency is
+flushed periodically and on backgrounding. Final Android CI compilation, APK
+smoke testing, and GitHub Release publication remain delivery checks.

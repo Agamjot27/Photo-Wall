@@ -32,8 +32,9 @@ Install and smoke-test that artifact before attaching it to a release.
 - [ ] Reopen a recently viewed thumbnail and viewer; cache counters reflect usage.
 - [ ] Restart the app, then revisit cached images while offline. Uncached images
       show Retry and recover when connectivity returns.
-- [ ] Open diagnostics and check memory/disk bytes, evictions, active downloads,
-      active decodes, and queued jobs. Clear caches; visible images remain usable.
+- [ ] Toggle the live grid panel; scroll while watching memory/disk bytes,
+      evictions, active downloads, and active decodes. Open Details / clear and
+      clear caches; visible images remain usable.
 - [ ] Repeat viewer open/back several times and inspect memory in profile mode for
       continually retained viewer images or repeated frame-budget overruns.
 - [ ] Install and launch the final release APK on Android.
@@ -44,7 +45,7 @@ iOS support as verified.
 
 ## Evidence so far
 
-- Automated formatting, analysis, and 40 tests pass on 2026-11-05.
+- Automated formatting, analysis, and 43 tests pass locally on 2026-11-06.
 - A debug emulator displayed the grid and full-screen viewer after a hot restart.
 - The Phase 8 baseline GitHub workflow succeeded and uploaded an APK artifact,
   but that artifact has not been installed or smoke-tested. It predates the
@@ -54,7 +55,7 @@ iOS support as verified.
   clearing, and reopening a cached photo after an offline app restart.
 - The Phase 10 Android APK and iOS simulator builds passed. The owner has not
   installed the Phase 10 APK, and iOS runtime testing remains open.
-- The agent-session release build fails before Android compilation when Gradle
-  attempts to connect its local daemon (`PipeImpl`, `Invalid argument: connect`).
-  Local release compilation remains blocked, but the cloud APK built and ran on
-  the emulator. Physical-device profile observations remain unavailable.
+- This Codex session cannot complete a local Gradle build because the daemon
+  cannot establish its loopback connection. The final source still needs the
+  cloud Android build and emulator smoke test. Physical-device profile
+  observations remain unavailable.

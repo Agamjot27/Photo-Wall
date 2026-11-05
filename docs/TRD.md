@@ -23,14 +23,15 @@ SDK when implementing. No SDK upgrade is required by this document.
 | PhotoWallApp | App configuration and composition of shared services. |
 | PhotoWallScreen | Lazy three-column grid, stable keys, scroll position, debug-panel access. |
 | PhotoViewerScreen | Selected-photo display, back navigation, viewer request ownership. |
-| PhotoImage | Stateful cell/viewer image widget; manages request generation and image lease; renders loading/error/ready state. |
+| DecodedPhotoImage | Stateful cell/viewer image widget; manages request generation and decoded-image handle; renders loading/error/ready state. |
 | PhotoCatalog | At least 100 stable photo IDs and their HTTPS source URLs; no network calls from widget build methods. |
 | ImageLoader | Coordinates memory lookup, disk/network source resolution, decoding, and subscriber delivery. |
 | LoadScheduler | Three-slot limit, request priority, queued-request removal, and finally-block permit release. |
 | MemoryImageCache | Decoded image LRU, byte accounting, eviction statistics, and cache-owned handles. |
 | DiskImageCache | Stable file keys, index recovery, serialized file/index changes, budget enforcement. |
 | ImageDecoder | Target-sized decoding with cleanup; replaceable implementation for optional Android integration. |
-| CacheDiagnosticsScreen | Displays live counters while open and offers manual clearing. |
+| CacheDebugOverlay | Toggleable live counters over the scrolling grid. |
+| CacheDiagnosticsScreen | Displays detailed counters and offers manual clearing. |
 | MemoryPressureObserver | Registers/unregisters with WidgetsBinding and requests aggressive memory trimming. |
 
 Use constructor injection for filesystem location, HTTP client, decoder, clock,
@@ -142,7 +143,7 @@ in the shared decoded cache. The viewer owns its decoded lease until the route
 is no longer renderable. Grid images use bounded lazy construction without
 keeping the entire catalog alive.
 
-PhotoImage releases its previous handle only after the rendered image has been
+DecodedPhotoImage releases its previous handle only after the rendered image has been
 replaced safely, and releases the final handle on disposal. RawImage does not own
 disposal; see [RawImage](https://api.flutter.dev/flutter/widgets/RawImage-class.html).
 Tests must cover replacement during a frame and disposal during a pending request.
@@ -217,10 +218,11 @@ Different target sizes may share disk content through a URL-keyed source future;
 waiting subscribers must not start an additional download for that source.
 Avoid acquiring a second scheduler permit inside an already admitted job.
 
-Prioritize the visible full-screen request, then visible grid requests, then any
-optional near-visible work; FIFO within a priority. Do not prefetch in the initial
-implementation. Remove queued work when no subscribers need it. Active transport
-or native decode cancellation is optional; correctness never depends on it.
+Prioritize full-screen requests over grid requests. Grid requests use newest-first
+queue order so a fast fling does not leave newly visible cells waiting behind old
+queued cells. Do not prefetch. Remove queued work when no subscribers need it.
+Cancel active transport and ask native workers to skip remaining decode stages
+when the last subscriber leaves; correctness does not depend on codec preemption.
 
 Each widget increments a request generation on photo/size change and disposal.
 Before applying a completion, verify mounted state, identity, and generation.
@@ -375,6 +377,13 @@ for a physical iPhone. Phase 11 adds a cancelDecode message and cooperative
 checks between native sampling, scaling, encoding, and Flutter decoding. Native
 codec calls already underway are not guaranteed to stop. CI compilation for
 Phase 11 remains pending.
+
+Phase 12 adds a live grid overlay and removes the alternate Flutter ImageCache
+path. Native channel errors fall back to Flutter decoding before a valid disk
+entry is treated as corrupt. Grid requests use newest-first queue order, HTTP
+requests share a client, and disk read recency is flushed in batches. A separate
+CI job checks the unpinned current Flutter stable release. Its result and the
+final APK still require verification after publishing the source.
 
 Before submission, complete the required phases, resolve Android verification,
 review release signing (currently the template's debug signing), and produce a
