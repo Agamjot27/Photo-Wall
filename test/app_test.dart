@@ -46,7 +46,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('cache-debug-panel')), findsNothing);
 
-    await tester.tap(find.byIcon(FIcons.activity));
+    await tester.tap(find.byKey(const ValueKey('cache-dock-action')));
     await tester.pump();
     expect(find.byKey(const ValueKey('cache-debug-panel')), findsOneWidget);
     expect(find.textContaining('Evictions'), findsOneWidget);
@@ -55,7 +55,18 @@ void main() {
     await tester.drag(find.byType(GridView), const Offset(0, -900));
     await tester.pump();
     expect(find.byKey(const ValueKey('cache-debug-panel')), findsOneWidget);
-    await tester.tap(find.byIcon(FIcons.activity));
+    final topAction = tester.widget<TextButton>(
+      find.byKey(const ValueKey('scroll-to-top-action')),
+    );
+    expect(topAction.onPressed, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('scroll-to-top-action')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      tester.state<ScrollableState>(find.byType(Scrollable)).position.pixels,
+      closeTo(0, 1),
+    );
+    await tester.tap(find.byKey(const ValueKey('cache-dock-action')));
     await tester.pump();
     expect(find.byKey(const ValueKey('cache-debug-panel')), findsNothing);
     await tester.pump(const Duration(milliseconds: 300));

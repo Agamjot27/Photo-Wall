@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
@@ -26,7 +27,73 @@ class PhotoWallScreen extends StatefulWidget {
 }
 
 class _PhotoWallScreenState extends State<PhotoWallScreen> {
+  final ScrollController _gridController = ScrollController();
   bool _showDiagnostics = false;
+  bool _canScrollToTop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _gridController.addListener(_updateScrollAction);
+  }
+
+  void _updateScrollAction() {
+    final canScrollToTop = _gridController.offset > 80;
+    if (canScrollToTop != _canScrollToTop) {
+      setState(() => _canScrollToTop = canScrollToTop);
+    }
+  }
+
+  void _scrollToTop() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _gridController.jumpTo(0);
+      return;
+    }
+    unawaited(
+      _gridController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
+  void _openPhoto(Photo photo) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    unawaited(
+      Navigator.of(context).push<void>(
+        PageRouteBuilder<void>(
+          transitionDuration:
+              reduceMotion ? Duration.zero : const Duration(milliseconds: 240),
+          reverseTransitionDuration:
+              reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+          pageBuilder:
+              (context, animation, secondaryAnimation) =>
+                  PhotoViewerScreen(photo: photo, loader: widget.loader),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final entrance = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+              reverseCurve: Curves.easeInCubic,
+            );
+            return FadeTransition(
+              opacity: entrance,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.985, end: 1).animate(entrance),
+                child: child,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _gridController.dispose();
+    super.dispose();
+  }
 
   void _openDiagnostics() {
     unawaited(
@@ -49,14 +116,6 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
       header: FHeader(
         title: const Text('Photo Wall'),
         suffixes: [
-          FHeaderAction(
-            icon: const Icon(FIcons.activity),
-            semanticsLabel:
-                _showDiagnostics
-                    ? 'Hide cache diagnostics'
-                    : 'Show cache diagnostics',
-            onPress: () => setState(() => _showDiagnostics = !_showDiagnostics),
-          ),
           Text(
             '${widget.photos.length} photos',
             style: context.theme.typography.sm.copyWith(
@@ -71,7 +130,8 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
           children: [
             GridView.builder(
               key: const PageStorageKey<String>('photo-grid'),
-              padding: const EdgeInsets.fromLTRB(14, 2, 14, 16),
+              controller: _gridController,
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 88),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: 10,
@@ -89,18 +149,7 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
                     borderRadius: BorderRadius.circular(12),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap:
-                          () => unawaited(
-                            Navigator.of(context).push<void>(
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => PhotoViewerScreen(
-                                      photo: photo,
-                                      loader: widget.loader,
-                                    ),
-                              ),
-                            ),
-                          ),
+                      onTap: () => _openPhoto(photo),
                       child: DecodedPhotoImage(
                         photo: photo,
                         loader: widget.loader.load,
@@ -114,13 +163,90 @@ class _PhotoWallScreenState extends State<PhotoWallScreen> {
             if (_showDiagnostics)
               Positioned(
                 left: 12,
-                bottom: 12,
+                bottom: 84,
                 child: CacheDebugOverlay(
                   loader: widget.loader,
                   onOpenDetails: _openDiagnostics,
                 ),
               ),
+            Positioned(
+              right: 14,
+              bottom: 14,
+              child: _GalleryDock(
+                canScrollToTop: _canScrollToTop,
+                showingCache: _showDiagnostics,
+                onScrollToTop: _scrollToTop,
+                onToggleCache:
+                    () => setState(() => _showDiagnostics = !_showDiagnostics),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryDock extends StatelessWidget {
+  const _GalleryDock({
+    required this.canScrollToTop,
+    required this.showingCache,
+    required this.onScrollToTop,
+    required this.onToggleCache,
+  });
+
+  final bool canScrollToTop;
+  final bool showingCache;
+  final VoidCallback onScrollToTop;
+  final VoidCallback onToggleCache;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surface.withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.7),
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton.icon(
+                  key: const ValueKey('scroll-to-top-action'),
+                  onPressed: canScrollToTop ? onScrollToTop : null,
+                  icon: const Icon(Icons.arrow_upward_rounded, size: 18),
+                  label: const Text('Top'),
+                ),
+                SizedBox(
+                  height: 24,
+                  child: VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: colors.outlineVariant,
+                  ),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('cache-dock-action'),
+                  onPressed: onToggleCache,
+                  style: TextButton.styleFrom(
+                    foregroundColor:
+                        showingCache ? colors.primary : colors.onSurface,
+                  ),
+                  icon: const Icon(Icons.monitor_heart_outlined, size: 18),
+                  label: const Text('Cache'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
