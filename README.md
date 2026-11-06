@@ -128,15 +128,20 @@ available, total, threshold, and low-memory values for the detailed panel.
   source is already small. Re-encoding and the second Flutter decode add CPU and
   copies; no performance gain is claimed without device measurements.
 - Forui supplies themes and header controls; the grid, caches, scheduler, and
-  image pipeline remain project code. The current checks use Flutter 3.29.2;
-  compatibility with newer stable releases has not been established.
+  image pipeline remain project code.
 - The Android release APK uses debug signing for this assignment. An install with a
   different signing key cannot replace it without uninstalling the old build,
   which clears that app's local cache and data.
 - Android uses Skia because Flutter 3.29.2's Impeller GLES renderer aborted on
-  the API 35 emulator after fast scrolling and opening photos. The crash matches
-  a [reported Flutter engine issue](https://github.com/flutter/flutter/issues/168682);
-  disabling Impeller is the documented Android workaround.
+  the API 35 emulator after fast scrolling and opening photos. The log reported
+  an ungenerated texture mipmap followed by a fatal GLES render-pass check,
+  matching a [reported Flutter engine issue](https://github.com/flutter/flutter/issues/168682).
+  This is an engine-level failure signature, but the log alone cannot prove that
+  application code played no part. The cache returns cloned `ui.Image` handles
+  to widgets; evictions dispose only the cache handle, and widgets release their
+  handles after the frame when scrolled away or popped. Tests cover active
+  clones during eviction and viewer disposal. Disabling Impeller is a renderer
+  workaround, not a fix for the underlying engine issue.
 
 ## 8. Validation and remaining limitations
 
@@ -152,9 +157,17 @@ matching the local file. It installed and launched on an API 35 emulator;
 scrolling to the final photo and opening it worked. An earlier build exposed an
 Impeller GLES crash on that emulator, so this release disables Impeller on
 Android. The [Phase 10 Android and iOS simulator builds](https://github.com/Agamjot27/Photo-Wall/actions)
-passed before the final UI changes. Later GitHub Actions jobs did not start
-because the account was locked by a billing issue; they did not run tests.
+passed on an earlier revision. The workflow also has a current-stable
+compatibility job, but no CI job ran for the final source because GitHub locked
+the account over a billing issue. Compatibility with newer Flutter stable is
+therefore unverified; the final Android APK was built with Flutter 3.29.2.
 Physical-device profiling and an iOS runtime test have not been performed.
+
+The live panel was captured on the API 35 emulator before and after scrolling.
+Memory stayed below 32 MiB while the eviction count rose from 57 to 104:
+
+<img src="docs/screenshots/cache-at-top.png" alt="Cache panel at the top showing 57 evictions" width="280">
+<img src="docs/screenshots/cache-after-scroll.png" alt="Cache panel after scrolling showing 104 evictions" width="280">
 
 See the [product requirements](docs/PRD.md), [technical design](docs/TRD.md),
 [phase history](docs/implementation-plan.md), and [release checklist](docs/release-checklist.md)

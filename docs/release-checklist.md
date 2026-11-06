@@ -46,17 +46,14 @@ iOS support as verified.
 ## Evidence so far
 
 - Automated formatting, analysis, and 46 tests passed locally on 2026-11-06.
-- A debug emulator displayed the grid and full-screen viewer after a hot restart.
-- The Phase 8 baseline GitHub workflow succeeded and uploaded an APK artifact,
-  but that artifact has not been installed or smoke-tested. It predates the
-  native Android bonus.
-- The Phase 9 release workflow passed. The owner installed its APK on an Android
-  Studio emulator and confirmed gallery/viewer navigation, diagnostics, cache
-  clearing, and reopening a cached photo after an offline app restart.
-- The Phase 10 Android APK and iOS simulator builds passed. The owner has not
-  installed the Phase 10 APK, and iOS runtime testing remains open.
+- An earlier Android APK passed emulator checks for navigation, diagnostics,
+  cache clearing, and reopening a cached photo after an offline restart.
+- Earlier Android and iOS simulator workflows passed before the final UI and
+  renderer changes. iOS runtime behavior is unverified.
 - The v1.0.0 APK was built locally from commit `32178d9`, installed on an API 35
   emulator, and attached to the GitHub Release. The gallery scrolled to the last
   photo, which opened in the viewer. The APK hash matches the Release asset.
-- Final GitHub Actions jobs did not start due to an account billing lock; this
-  is not a test failure. Physical-device profile observations remain unavailable.
+- Final GitHub Actions jobs did not start due to an account billing lock; no
+  final CI result exists. Physical-device profile observations are unavailable.
+- API 35 emulator screenshots in `docs/screenshots/` show the live panel while
+  the grid scrolls; memory stayed under 32 MiB and evictions rose from 57 to 104.
