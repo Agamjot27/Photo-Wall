@@ -26,9 +26,9 @@ flutter build apk --release
 ```
 
 The APK is written to `build/app/outputs/flutter-apk/app-release.apk`. The
-[Android workflow](.github/workflows/android-apk.yml) also uploads an APK under
-the successful run's **Artifacts** section. Workflow artifacts expire after 14
-days; the final APK should be attached to a GitHub Release.
+[v1.0.0 GitHub Release](https://github.com/Agamjot27/Photo-Wall/releases/tag/v1.0.0)
+contains the downloadable Android APK. The [Android workflow](.github/workflows/android-apk.yml)
+also uploads a temporary artifact when GitHub Actions is available.
 
 The optional iOS host can be built on macOS with Xcode. A physical iPhone needs
 development signing. The unsigned simulator build produced by CI cannot be
@@ -130,7 +130,7 @@ available, total, threshold, and low-memory values for the detailed panel.
 - Forui supplies themes and header controls; the grid, caches, scheduler, and
   image pipeline remain project code. The current checks use Flutter 3.29.2;
   compatibility with newer stable releases has not been established.
-- The CI APK uses debug signing for this assignment. An Android install with a
+- The Android release APK uses debug signing for this assignment. An install with a
   different signing key cannot replace it without uninstalling the old build,
   which clears that app's local cache and data.
 - Android uses Skia because Flutter 3.29.2's Impeller GLES renderer aborted on
@@ -145,17 +145,16 @@ budgets and eviction, restart and corrupt-file recovery, concurrency, native
 fallback, stale results, navigation, memory pressure, and the live panel.
 Formatting, analysis, and 46 Flutter tests passed locally on 6 November 2026.
 
-The [Phase 9 Android workflow](https://github.com/Agamjot27/Photo-Wall/actions/runs/41979856858)
-built an APK that was installed on an Android Studio emulator.
-Gallery/viewer navigation, diagnostics, cache clearing, and reopening a cached
-photo offline worked there. The [Phase 10 Android APK](https://github.com/Agamjot27/Photo-Wall/actions/runs/41992822705)
-and [iOS simulator build](https://github.com/Agamjot27/Photo-Wall/actions/runs/41992822607)
-passed CI. The four subsequent gallery UI commits and this diagnostics update
-have not yet been built in CI. Their release APK needs an emulator smoke test
-before publication. A local release build could not complete because Gradle
-failed to establish a loopback connection in this environment.
-Physical-device performance profiling and an iOS runtime test have not been
-performed. The Android APK has not yet been attached to a GitHub Release.
+The [v1.0.0 APK](https://github.com/Agamjot27/Photo-Wall/releases/download/v1.0.0/app-release.apk)
+was built locally from commit `32178d9` with Flutter 3.29.2. GitHub reports its
+SHA-256 as `84c0d700f40e2067c0d24e97cce46d65b46b1a863e7490fad288c7cc9c640a0d`,
+matching the local file. It installed and launched on an API 35 emulator;
+scrolling to the final photo and opening it worked. An earlier build exposed an
+Impeller GLES crash on that emulator, so this release disables Impeller on
+Android. The [Phase 10 Android and iOS simulator builds](https://github.com/Agamjot27/Photo-Wall/actions)
+passed before the final UI changes. Later GitHub Actions jobs did not start
+because the account was locked by a billing issue; they did not run tests.
+Physical-device profiling and an iOS runtime test have not been performed.
 
 See the [product requirements](docs/PRD.md), [technical design](docs/TRD.md),
 [phase history](docs/implementation-plan.md), and [release checklist](docs/release-checklist.md)

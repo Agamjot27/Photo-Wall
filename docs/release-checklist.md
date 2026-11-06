@@ -37,7 +37,7 @@ Install and smoke-test that artifact before attaching it to a release.
       clear caches; visible images remain usable.
 - [ ] Repeat viewer open/back several times and inspect memory in profile mode for
       continually retained viewer images or repeated frame-budget overruns.
-- [ ] Install and launch the final release APK on Android.
+- [x] Install and launch the final release APK on Android.
 
 The optional iOS host is checked separately by the macOS simulator build
 workflow. An iOS simulator or device smoke test is still required before claiming
@@ -55,7 +55,8 @@ iOS support as verified.
   clearing, and reopening a cached photo after an offline app restart.
 - The Phase 10 Android APK and iOS simulator builds passed. The owner has not
   installed the Phase 10 APK, and iOS runtime testing remains open.
-- The local Gradle release build failed on 2026-11-06 because it could not
-  establish a loopback connection. The final source still needs the cloud
-  Android build and emulator smoke test. Physical-device profile observations
-  remain unavailable.
+- The v1.0.0 APK was built locally from commit `32178d9`, installed on an API 35
+  emulator, and attached to the GitHub Release. The gallery scrolled to the last
+  photo, which opened in the viewer. The APK hash matches the Release asset.
+- Final GitHub Actions jobs did not start due to an account billing lock; this
+  is not a test failure. Physical-device profile observations remain unavailable.
